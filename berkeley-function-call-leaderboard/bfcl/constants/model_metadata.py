@@ -870,6 +870,18 @@ MODEL_METADATA_MAPPING = {
         "xAI",
         "Proprietary",
     ],
+    "allenai/qwen2.5-7b-openai": [
+        "Qwen2.5-7B-Instruct (Prompt)",
+        "https://huggingface.co/Qwen/Qwen2-7B-Instruct",
+        "Qwen",
+        "apache-2.0",
+    ],
+    "allenai/general-tool-use-dev": [
+        "AllenAI",
+        "https://allenai.org/",
+        "AllenAI",
+        "Apache-2.0",
+    ],
     "ZJared/Haha-7B": [
         "Haha-7B",
         "https://huggingface.co/ZJared/Haha-7B",
