@@ -17,7 +17,7 @@ class AllenAIHandler(OpenAIHandler):
         self.is_fc_model = False
 
     def decode_ast(self, result, language="Python"):
-        result = result.replace("<tool_calls>", "").replace("</tool_calls>", "")
+        result = result.replace("<function_calls>", "").replace("</function_calls>", "")
         try:
             parsed = json.loads(result)
         except json.JSONDecodeError:
