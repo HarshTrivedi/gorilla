@@ -14,5 +14,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vim
 
 COPY pyproject.toml .
-RUN pip install -e .
+RUN pip install .
 COPY . /stage
