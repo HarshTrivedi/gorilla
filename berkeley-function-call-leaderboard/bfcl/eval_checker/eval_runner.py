@@ -1,4 +1,8 @@
 import argparse
+import os
+import json
+from collections import Counter
+import shutil
 
 from bfcl.constants.category_mapping import (
     TEST_COLLECTION_MAPPING,
@@ -29,6 +33,10 @@ from bfcl.model_handler.handler_map import HANDLER_MAP
 from bfcl.utils import *
 from dotenv import load_dotenv
 from tqdm import tqdm
+
+
+def verbose_logs():
+    return str(os.getenv("VERBOSE")) in ("True", "1")
 
 
 def get_handler(model_name):
@@ -367,16 +375,32 @@ def ast_file_runner(
 
     result = []
     correct_count = 0
+    error_type_counter = Counter()
+    output_file_path = score_dir / model_name / f"{test_category}__log.txt"
+    error_type_distribution_file_path = score_dir / model_name / f"{test_category}__error_type_distribution.txt"
+    log_content = ""
     for i in range(len(model_result)):
         index: str = model_result[i]["id"]
         model_result_item = model_result[i]["result"]
         prompt_item = prompt[i]["function"]
         possible_answer_item = possible_answer[i]["ground_truth"]
-
         try:
             model_result_item_raw = model_result_item
             model_result_item = handler.decode_ast(model_result_item, language)
         except Exception as e:
+            error_type_counter["decoding_error"] += 1
+            log_content += "-------------------------------------------------------------------\n"
+            log_content += f">> ID: {str(index)}\n\n"
+            log_content += ">> Raw Output:\n"
+            log_content += str(model_result_item_raw) + "\n\n"
+            log_content += ">> Decoded Output:\n"
+            log_content += "N/A"+"\n\n"
+            log_content += ">> Expected Output:"+"\n"
+            log_content += str(possible_answer_item) + "\n\n"
+            log_content += ">> Error Type:" +"\n"
+            log_content += "decoding_error" + "\n\n"
+            log_content += ">> Functions:" +"\n"
+            log_content += str(prompt_item) + "\n\n"
             result.append(
                 {
                     "id": index,
@@ -423,6 +447,7 @@ def ast_file_runner(
 
         if checker_result["valid"]:
             correct_count += 1
+            error_type_counter["none"] += 1
         else:
             temp = {}
             temp["id"] = index
@@ -435,6 +460,21 @@ def ast_file_runner(
             temp["model_result_raw"] = model_result_item_raw
             temp["model_result_decoded"] = model_result_item
             temp["possible_answer"] = possible_answer_item
+            log_content += "-------------------------------------------------------------------\n"
+            log_content += f">> ID: {str(index)}\n\n"
+            log_content += ">> Raw Output:\n"
+            log_content += str(model_result_item_raw) + "\n\n"
+            log_content += ">> Decoded Output:\n"
+            log_content += str(model_result_item) + "\n\n"
+            log_content += ">> Expected Output:\n"
+            log_content += str(possible_answer_item) + "\n\n"
+            log_content += ">> Error Type:\n"
+            log_content += str(checker_result["error_type"]) + "\n\n"
+            log_content += ">> Error\n"
+            log_content += str(checker_result["error"]) + "\n\n"
+            log_content += ">> Functions:" +"\n"
+            log_content += str(prompt_item) + "\n\n"
+            error_type_counter[temp["error_type"]] += 1
             result.append(temp)
 
     accuracy = correct_count / len(model_result)
@@ -449,6 +489,20 @@ def ast_file_runner(
     output_file_name = f"{VERSION_PREFIX}_{test_category}_score.json"
     output_file_dir = score_dir / model_name
     write_list_of_dicts_to_file(output_file_name, result, output_file_dir)
+
+    with open(output_file_path, "a") as file:
+        file.write(log_content)
+
+    error_type_content = "Error type distribution:\n"
+    error_type_content += json.dumps(error_type_counter, indent=4) + "\n"
+    error_type_content += f"Total count: {sum(error_type_counter.values())}\n"
+
+    with open(error_type_distribution_file_path, "a") as file:
+        file.write(error_type_content)
+
+    if verbose_logs():
+        print(log_content)
+        print(error_type_content)
 
     return accuracy, len(model_result)
 
@@ -603,7 +657,7 @@ def evaluate_task(
                 f"---- Getting real-time execution result from ground truth"
                 f" for {test_category} ----"
             )
-            
+
             possible_answer_file = find_file_with_suffix(POSSIBLE_ANSWER_PATH, test_category)
             get_executable_expected_output(prompt_file, possible_answer_file)
             print(
@@ -691,7 +745,8 @@ def main(model, test_categories, api_sanity_check, result_dir, score_dir):
             # This is differnet than the model name format that the generation script "openfunctions_evaluation.py" takes in (where the name contains "/").
             # We patch it here to avoid confusing the user.
             model_names.append(model_name.replace("/", "_"))
-
+    for model_name in model_names:
+        shutil.rmtree(score_dir / model_name, ignore_errors=True)
     # Driver function to run the evaluation for all categories involved.
     runner(model_names, all_test_categories, api_sanity_check, result_dir, score_dir)
 
