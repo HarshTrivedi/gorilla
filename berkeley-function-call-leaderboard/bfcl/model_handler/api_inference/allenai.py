@@ -41,19 +41,6 @@ class AllenAIHandler(OpenAIHandler):
         self.is_fc_model = False
 
 
-    def get_function_name_map(self, functions: list) -> dict[str, str]:
-        function_name_map = {}
-        for function in functions:
-            original_name = function["name"]
-            new_name = original_name.split(".")[-1]
-            function["name"] = new_name
-            assert new_name not in function_name_map, (
-                f"Function name {new_name} already exists in function_name_map: {function_name_map}"
-            )
-            function_name_map[new_name] = original_name
-        return function_name_map
-
-
 class AllenAICodeHandler(AllenAIHandler):
 
     def decode_ast(self, result, language="Python"):
@@ -68,8 +55,6 @@ class AllenAICodeHandler(AllenAIHandler):
         try:
             for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
                 result = result.replace(token, "")
-                for new_name, original_name in self.function_name_map.items():
-                    result = result.replace(new_name, original_name)
             output = super().decode_execute(result)
         except Exception as e:
             print(f"Error parsing function calls in decode_execute: {e}")
@@ -79,7 +64,6 @@ class AllenAICodeHandler(AllenAIHandler):
     def _pre_query_processing_prompting(self, test_entry: dict) -> dict:
         functions: list = test_entry["function"]
         test_category: str = test_entry["id"].rsplit("_", 1)[0]
-        self.function_name_map = self.get_function_name_map(functions)
         functions = func_doc_language_specific_pre_processing(functions, test_category)
         test_entry["question"][0] = system_prompt_pre_processing_chat_model(
             test_entry["question"][0], functions, test_category
@@ -89,7 +73,7 @@ class AllenAICodeHandler(AllenAIHandler):
         updated_output_format = (
             f"\n{FUNCTION_CALL_START}\n"
             "func_name1(params_name1=params_value1, params_name2=params_value2, ...)\n"
-            "func_name2(params_name3=params_value3, ...)\n"
+            "module_name.func_name2(params_name3=params_value3, ...)\n"
             f"{FUNCTION_CALL_END}\n"
         )
         content = strict_replace(content, original_output_format, updated_output_format)
@@ -121,20 +105,17 @@ class AllenAICodeHandler(AllenAIHandler):
         test_entry["question"][0][0]["content"] = content
         return {"message": []}
 
-    def _parse_query_response_prompting(self, api_response: any) -> dict:
-        output = super()._parse_query_response_prompting(api_response)
-        for new_name, original_name in self.function_name_map.items():
-            output["model_responses"] = output["model_responses"].replace(new_name, original_name)
-            output["model_responses_message_for_chat_history"].content = output["model_responses_message_for_chat_history"].content.replace(
-                new_name, original_name
-            )
-        return output
-
 
 class AllenAIJsonHandler(AllenAIHandler):
     def decode_ast(self, result, language="Python"):
         for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
             result = result.replace(token, "")
+
+        try:
+            return _parse_function_calls(result)
+        except Exception:
+            pass
+
         try:
             parsed = json.loads(result)
         except json.JSONDecodeError:
@@ -150,8 +131,6 @@ class AllenAIJsonHandler(AllenAIHandler):
         try:
             for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
                 result = result.replace(token, "")
-                for new_name, original_name in self.function_name_map.items():
-                    result = result.replace(new_name, original_name)
             output = super().decode_execute(result)
         except Exception as e:
             print(f"Error parsing function calls in decode_execute: {e}")
@@ -162,7 +141,6 @@ class AllenAIJsonHandler(AllenAIHandler):
         functions: list = test_entry["function"]
         test_category: str = test_entry["id"].rsplit("_", 1)[0]
         functions = func_doc_language_specific_pre_processing(functions, test_category)
-        self.function_name_map = self.get_function_name_map(functions)
         test_entry["question"][0] = system_prompt_pre_processing_chat_model(
             test_entry["question"][0], functions, test_category
         )
@@ -171,13 +149,13 @@ class AllenAIJsonHandler(AllenAIHandler):
         updated_format = (
             f"\n{FUNCTION_CALL_START}\n"
             '[{"name": "func_name1", "arguments": {"params_name1": params_value1, "params_name2": params_value2, ...}}, '
-            '{"name": "func_name2", "arguments": {"params_name1": params_value1, ...}}]'
+            '{"name": "model_name.func_name2", "arguments": {"params_name1": params_value1, ...}}]'
             f"\n{FUNCTION_CALL_END}\n"
         )
         content = content.replace(original_format, updated_format)
         content = content.replace(
             "You SHOULD NOT include any other text in the response.",
-            "Make sure to also include module name as part of the function name when applicable. E.g., triangle_properties.get instead of just get.\n"
+            "Make sure to also include module name as part of the output when applicable. E.g., triangle_properties.get instead of just get.\n"
             "You SHOULD NOT include any other text in the response."
         )
         original_input_format = "Here is a list of functions in JSON format that you can invoke."
@@ -209,6 +187,30 @@ def _parse_function_calls(code: str) -> list:
                 name: eval(value)
                 for name, value in function_call_.keyword_arguments.items()
             }
+            if (
+                not arguments and
+                function_call_.positional_arguments and
+                len(function_call_.positional_arguments) == 1 and
+                (
+                    isinstance(function_call_.positional_arguments[0], dict) or
+                    (
+                        isinstance(function_call_.positional_arguments[0], str) and
+                        isinstance(json.loads(function_call_.positional_arguments[0]), dict)
+                    )
+                )
+            ):
+                # Sometimes instead of outputing function(a=1, b=2), it outputs function('{"a": 1, "b": 2}')
+                if isinstance(function_call_.positional_arguments[0], dict):
+                    arguments = function_call_.positional_arguments[0]
+                else:
+                    arguments = json.loads(function_call_.positional_arguments[0])
+                print()
+            if arguments.get("type", None) == "dict" and isinstance(arguments.get("properties", None), dict):
+                # Sometimes instead of outputing function(a=1, b=2), it outputs function(type="dict", properties={"a": 1, "b": 2})
+                arguments = arguments["properties"]
+            if isinstance(arguments.get("type", None), dict) and len(arguments) == 1:
+                # Sometimes instead of outputing function(a=1, b=2), it outputs function(type={"a": 1, "b": 2})
+                arguments = arguments["type"]
             function_calls.append({name: arguments})
     assert len(function_calls) == len(code.strip().splitlines())
     return function_calls
