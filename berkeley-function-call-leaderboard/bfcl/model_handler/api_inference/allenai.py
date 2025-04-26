@@ -1,6 +1,8 @@
 import os
+import json
 from dataclasses import dataclass
 from typing import Any
+from dotenv import load_dotenv
 
 import libcst as cst
 from libcst import CSTNode
@@ -13,6 +15,20 @@ from openai import OpenAI
 
 FUNCTION_CALL_START = "<function_calls>"
 FUNCTION_CALL_END = "</function_calls>"
+FUNCTION_DEF_START = "<functions>"
+FUNCTION_DEF_END = "</functions>"
+
+
+def get_allenai_handler():
+    load_dotenv()
+    call_format = os.getenv("CALL_FORMAT")
+    if call_format == "json":
+        return AllenAIJsonHandler
+    elif call_format == "code":
+        return AllenAICodeHandler
+    raise ValueError(
+        f"CALL_FORMAT should be either 'json' or 'code', but got {call_format}"
+    )
 
 
 class AllenAIHandler(OpenAIHandler):
@@ -23,6 +39,22 @@ class AllenAIHandler(OpenAIHandler):
         port = os.getenv("VLLM_PORT")  # set them in .env
         self.client = OpenAI(base_url=f"http://{host}:{port}/v1")
         self.is_fc_model = False
+
+
+    def get_function_name_map(self, functions: list) -> dict[str, str]:
+        function_name_map = {}
+        for function in functions:
+            original_name = function["name"]
+            new_name = original_name.split(".")[-1]
+            function["name"] = new_name
+            assert new_name not in function_name_map, (
+                f"Function name {new_name} already exists in function_name_map: {function_name_map}"
+            )
+            function_name_map[new_name] = original_name
+        return function_name_map
+
+
+class AllenAICodeHandler(AllenAIHandler):
 
     def decode_ast(self, result, language="Python"):
         try:
@@ -47,15 +79,7 @@ class AllenAIHandler(OpenAIHandler):
     def _pre_query_processing_prompting(self, test_entry: dict) -> dict:
         functions: list = test_entry["function"]
         test_category: str = test_entry["id"].rsplit("_", 1)[0]
-        self.function_name_map = {}
-        for function in functions:
-            original_name = function["name"]
-            new_name = original_name.split(".")[-1]
-            function["name"] = new_name
-            assert new_name not in self.function_name_map, (
-                f"Function name {new_name} already exists in function_name_map: {self.function_name_map}"
-            )
-            self.function_name_map[new_name] = original_name
+        self.function_name_map = self.get_function_name_map(functions)
         functions = func_doc_language_specific_pre_processing(functions, test_category)
         test_entry["question"][0] = system_prompt_pre_processing_chat_model(
             test_entry["question"][0], functions, test_category
@@ -63,10 +87,10 @@ class AllenAIHandler(OpenAIHandler):
         content = test_entry["question"][0][0]["content"]
         original_output_format = "[func_name1(params_name1=params_value1, params_name2=params_value2...), func_name2(params)]"
         updated_output_format = (
-            "\n<function_calls>\n"
+            f"\n{FUNCTION_CALL_START}\n"
             "func_name1(params_name1=params_value1, params_name2=params_value2, ...)\n"
             "func_name2(params_name3=params_value3, ...)\n"
-            "</function_calls>\n"
+            f"{FUNCTION_CALL_END}\n"
         )
         content = strict_replace(content, original_output_format, updated_output_format)
         content = strict_replace(
@@ -91,9 +115,9 @@ class AllenAIHandler(OpenAIHandler):
             "If no function satisfies the requirement, return an empty code block as discussed above."
         )
         original_input_format = "Here is a list of functions in JSON format that you can invoke."
-        updated_input_format = "Here is a list of functions in JSON format that you can invoke."#\n<functions>"
+        updated_input_format = f"Here is a list of functions in JSON format that you can invoke.\n{FUNCTION_DEF_START}"
         content = strict_replace(content, original_input_format, updated_input_format)
-        content = content.rstrip() + "\n</functions>\n"
+        content = content.rstrip() + f"\n{FUNCTION_DEF_END}\n"
         test_entry["question"][0][0]["content"] = content
         return {"message": []}
 
@@ -105,6 +129,63 @@ class AllenAIHandler(OpenAIHandler):
                 new_name, original_name
             )
         return output
+
+
+class AllenAIJsonHandler(AllenAIHandler):
+    def decode_ast(self, result, language="Python"):
+        for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
+            result = result.replace(token, "")
+        try:
+            parsed = json.loads(result)
+        except json.JSONDecodeError:
+            try:
+                parsed = eval(result)
+            except Exception:  # Temporary hack
+                return super().decode_ast(result)
+        if isinstance(parsed, list) and all("name" in item and "arguments" in item  for item in parsed):
+            return [{item["name"]: item["arguments"]} for item in parsed]
+        return super().decode_ast(result)
+
+    def decode_execute(self, result):
+        try:
+            for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
+                result = result.replace(token, "")
+                for new_name, original_name in self.function_name_map.items():
+                    result = result.replace(new_name, original_name)
+            output = super().decode_execute(result)
+        except Exception as e:
+            print(f"Error parsing function calls in decode_execute: {e}")
+            raise e
+        return output
+
+    def _pre_query_processing_prompting(self, test_entry: dict) -> dict:
+        functions: list = test_entry["function"]
+        test_category: str = test_entry["id"].rsplit("_", 1)[0]
+        functions = func_doc_language_specific_pre_processing(functions, test_category)
+        self.function_name_map = self.get_function_name_map(functions)
+        test_entry["question"][0] = system_prompt_pre_processing_chat_model(
+            test_entry["question"][0], functions, test_category
+        )
+        content = test_entry["question"][0][0]["content"]
+        original_format = "[func_name1(params_name1=params_value1, params_name2=params_value2...), func_name2(params)]"
+        updated_format = (
+            f"\n{FUNCTION_CALL_START}\n"
+            '[{"name": "func_name1", "arguments": {"params_name1": params_value1, "params_name2": params_value2, ...}}, '
+            '{"name": "func_name2", "arguments": {"params_name1": params_value1, ...}}]'
+            f"\n{FUNCTION_CALL_END}\n"
+        )
+        content = content.replace(original_format, updated_format)
+        content = content.replace(
+            "You SHOULD NOT include any other text in the response.",
+            "Make sure to also include module name as part of the function name when applicable. E.g., triangle_properties.get instead of just get.\n"
+            "You SHOULD NOT include any other text in the response."
+        )
+        original_input_format = "Here is a list of functions in JSON format that you can invoke."
+        updated_input_format = f"Here is a list of functions in JSON format that you can invoke.\n{FUNCTION_DEF_START}"
+        content = strict_replace(content, original_input_format, updated_input_format)
+        content = content.rstrip() + f"\n{FUNCTION_DEF_END}\n"
+        test_entry["question"][0][0]["content"] = content
+        return {"message": []}
 
 
 def strict_replace(text: str, old: str, new: str) -> str:

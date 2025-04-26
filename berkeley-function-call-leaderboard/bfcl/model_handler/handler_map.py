@@ -8,7 +8,7 @@ from bfcl.model_handler.api_inference.gemini import GeminiHandler
 from bfcl.model_handler.api_inference.gogoagent import GoGoAgentHandler
 from bfcl.model_handler.api_inference.gorilla import GorillaHandler
 from bfcl.model_handler.api_inference.grok import GrokHandler
-from bfcl.model_handler.api_inference.allenai import AllenAIHandler
+from bfcl.model_handler.api_inference.allenai import get_allenai_handler
 from bfcl.model_handler.api_inference.mistral import MistralHandler
 from bfcl.model_handler.api_inference.nexus import NexusHandler
 from bfcl.model_handler.api_inference.nova import NovaHandler
@@ -102,7 +102,7 @@ api_inference_handler_map = {
     # "yi-large-fc": YiHandler,  #  Their API is under maintenance, and will not be back online in the near future
     "palmyra-x-004": WriterHandler,
     "grok-beta": GrokHandler,
-    "allenai/general-tool-use-dev": AllenAIHandler,
+    "allenai/general-tool-use-dev": get_allenai_handler(),
 }
 
 # Inference through local hosting
