@@ -19,6 +19,10 @@ FUNCTION_DEF_START = "<functions>"
 FUNCTION_DEF_END = "</functions>"
 
 
+def verbose_logs():
+    return str(os.getenv("VERBOSE")) in ("True", "1")
+
+
 def get_allenai_handler():
     load_dotenv()
     call_format = os.getenv("CALL_FORMAT")
@@ -43,6 +47,42 @@ class AllenAIHandler(OpenAIHandler):
     def decode_execute(self, result):
         output = self.decode_ast(result, language="Python")
         output = decoded_output_to_execution_list(output)
+        return output
+
+    def _query_prompting(self, inference_data: dict):
+        def get_(data, key):
+            return getattr(data, key) if hasattr(data, key) else data[key]
+
+        def set_(data, key, value):
+            if hasattr(data, key):
+                setattr(data, key, value)
+            else:
+                data[key] = value
+
+        updated_messages = []
+        if verbose_logs():
+            print("\n\n\n\n")
+        for message in inference_data["message"]:
+            role = get_(message, "role")
+            content = get_(message, "content")
+            if role == "user" and "'role': 'tool'" in content:
+                array = [str(item['content'] if item['content'] != 'None' else '') for item in eval(content)]
+                content = "\n".join([item for item in array if item])
+                set_(message, "content", content)
+                set_(message, "role", "environment")
+            updated_messages.append(message)
+            if verbose_logs():
+                role = get_(message, "role")
+                content = get_(message, "content")
+                print(f">>>>>>> role='{role}' (content v) >>>>>>>")
+                print(content)
+                print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+                print()
+        inference_data["message"] = updated_messages
+        output = super()._query_prompting(inference_data)
+        print("\n>>>>>>> output message >>>>>>>")
+        print(dict(get_(get_(output[0], "choices")[0], "message")))
+        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
         return output
 
 
