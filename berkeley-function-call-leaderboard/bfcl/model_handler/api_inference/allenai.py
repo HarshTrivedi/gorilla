@@ -9,7 +9,7 @@ from libcst import CSTNode
 
 from bfcl.model_handler.api_inference.openai import OpenAIHandler
 from bfcl.model_handler.model_style import ModelStyle
-from bfcl.model_handler.utils import func_doc_language_specific_pre_processing, system_prompt_pre_processing_chat_model
+from bfcl.model_handler.utils import func_doc_language_specific_pre_processing, system_prompt_pre_processing_chat_model, decoded_output_to_execution_list
 from openai import OpenAI
 
 
@@ -40,6 +40,11 @@ class AllenAIHandler(OpenAIHandler):
         self.client = OpenAI(base_url=f"http://{host}:{port}/v1")
         self.is_fc_model = False
 
+    def decode_execute(self, result):
+        output = self.decode_ast(result, language="Python")
+        output = decoded_output_to_execution_list(output)
+        return output
+
 
 class AllenAICodeHandler(AllenAIHandler):
 
@@ -48,16 +53,6 @@ class AllenAICodeHandler(AllenAIHandler):
             output = _parse_function_calls(result)
         except Exception as e:
             print(f"Error parsing function calls in decode_ast: {e}")
-            raise e
-        return output
-
-    def decode_execute(self, result):
-        try:
-            for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
-                result = result.replace(token, "")
-            output = super().decode_execute(result)
-        except Exception as e:
-            print(f"Error parsing function calls in decode_execute: {e}")
             raise e
         return output
 
@@ -126,16 +121,6 @@ class AllenAIJsonHandler(AllenAIHandler):
         if isinstance(parsed, list) and all("name" in item and "arguments" in item  for item in parsed):
             return [{item["name"]: item["arguments"]} for item in parsed]
         return super().decode_ast(result)
-
-    def decode_execute(self, result):
-        try:
-            for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
-                result = result.replace(token, "")
-            output = super().decode_execute(result)
-        except Exception as e:
-            print(f"Error parsing function calls in decode_execute: {e}")
-            raise e
-        return output
 
     def _pre_query_processing_prompting(self, test_entry: dict) -> dict:
         functions: list = test_entry["function"]
