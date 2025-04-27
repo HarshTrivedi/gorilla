@@ -80,9 +80,10 @@ class AllenAIHandler(OpenAIHandler):
                 print()
         inference_data["message"] = updated_messages
         output = super()._query_prompting(inference_data)
-        print("\n>>>>>>> output message >>>>>>>")
-        print(dict(get_(get_(output[0], "choices")[0], "message")))
-        print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+        if verbose_logs():
+            print("\n>>>>>>> output message >>>>>>>")
+            print(dict(get_(get_(output[0], "choices")[0], "message")))
+            print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
         return output
 
 
