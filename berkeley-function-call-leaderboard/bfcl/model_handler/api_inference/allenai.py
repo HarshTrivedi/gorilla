@@ -18,14 +18,29 @@ FUNCTION_CALL_END = "</function_calls>"
 FUNCTION_DEF_START = "<functions>"
 FUNCTION_DEF_END = "</functions>"
 
+load_dotenv()
+
 
 def verbose_logs():
     return str(os.getenv("VERBOSE")) in ("True", "1")
 
 
+def use_environment_role():
+    return str(os.getenv("USE_ENVIRONMENT_ROLE")) in ("True", "1")
+
+
+def use_prompt_fixes():
+    return str(os.getenv("USE_PROMPT_FIXES")) in ("True", "1")
+
+
+def use_output_processing_fixes():
+    return str(os.getenv("USE_OUTPUT_PROCESSING_FIXES")) in ("True", "1")
+
+
 def get_allenai_handler():
-    load_dotenv()
     call_format = os.getenv("CALL_FORMAT")
+    if call_format == "bfcl":
+        return AllenAIHandler
     if call_format == "json":
         return AllenAIJsonHandler
     elif call_format == "code":
@@ -65,7 +80,7 @@ class AllenAIHandler(OpenAIHandler):
         for message in inference_data["message"]:
             role = get_(message, "role")
             content = get_(message, "content")
-            if role == "user" and "'role': 'tool'" in content:
+            if use_environment_role() and role == "user" and "'role': 'tool'" in content:
                 array = [str(item['content'] if item['content'] != 'None' else '') for item in eval(content)]
                 content = "\n".join([item for item in array if item])
                 set_(message, "content", content)
@@ -112,28 +127,29 @@ class AllenAICodeHandler(AllenAIHandler):
             "module_name.func_name2(params_name3=params_value3, ...)\n"
             f"{FUNCTION_CALL_END}\n"
         )
-        content = strict_replace(content, original_output_format, updated_output_format)
-        content = strict_replace(
-            content,
-            "If none of the functions can be used, point it out.",
-            "If none of the functions can be used, point it out by returning no function calls (empty code)."
-        )
-        content = strict_replace(
-            content,
-            "If the given question lacks the parameters required by the function, also point it out.",
-            "If the given question lacks the parameters required by the function, also point it out by returning no function calls (empty code)."
-        )
-        content = strict_replace(
-            content,
-            "If you decide to invoke any of the function(s), you MUST put it in the format of",
-            "If you decide to invoke any of the function(s), you MUST output it in the following format:"
-        )
-        content = strict_replace(
-            content,
-            "you should try your best to complete the tasks requested by the user within the current turn.",
-            "you should try your best to complete the tasks requested by the user within the current turn. "
-            "If no function satisfies the requirement, return an empty code block as discussed above."
-        )
+        if use_prompt_fixes():
+            content = strict_replace(content, original_output_format, updated_output_format)
+            content = strict_replace(
+                content,
+                "If none of the functions can be used, point it out.",
+                "If none of the functions can be used, point it out by returning no function calls (empty code)."
+            )
+            content = strict_replace(
+                content,
+                "If the given question lacks the parameters required by the function, also point it out.",
+                "If the given question lacks the parameters required by the function, also point it out by returning no function calls (empty code)."
+            )
+            content = strict_replace(
+                content,
+                "If you decide to invoke any of the function(s), you MUST put it in the format of",
+                "If you decide to invoke any of the function(s), you MUST output it in the following format:"
+            )
+            content = strict_replace(
+                content,
+                "you should try your best to complete the tasks requested by the user within the current turn.",
+                "you should try your best to complete the tasks requested by the user within the current turn. "
+                "If no function satisfies the requirement, return an empty code block as discussed above."
+            )
         original_input_format = "Here is a list of functions in JSON format that you can invoke."
         updated_input_format = f"Here is a list of functions in JSON format that you can invoke.\n{FUNCTION_DEF_START}"
         content = strict_replace(content, original_input_format, updated_input_format)
@@ -147,6 +163,10 @@ class AllenAIJsonHandler(AllenAIHandler):
         for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
             result = result.replace(token, "")
 
+        if not use_output_processing_fixes():
+            return super().decode_ast(result)
+
+        # Try a few different ways to make it work
         try:
             return _parse_function_calls(result)
         except Exception:
@@ -159,8 +179,10 @@ class AllenAIJsonHandler(AllenAIHandler):
                 parsed = eval(result)
             except Exception:  # Temporary hack
                 return super().decode_ast(result)
+
         if isinstance(parsed, list) and all("name" in item and "arguments" in item  for item in parsed):
             return [{item["name"]: item["arguments"]} for item in parsed]
+
         return super().decode_ast(result)
 
     def _pre_query_processing_prompting(self, test_entry: dict) -> dict:
@@ -178,12 +200,13 @@ class AllenAIJsonHandler(AllenAIHandler):
             '{"name": "model_name.func_name2", "arguments": {"params_name1": params_value1, ...}}]'
             f"\n{FUNCTION_CALL_END}\n"
         )
-        content = content.replace(original_format, updated_format)
-        content = content.replace(
-            "You SHOULD NOT include any other text in the response.",
-            "Make sure to also include module name as part of the output when applicable. E.g., triangle_properties.get instead of just get.\n"
-            "You SHOULD NOT include any other text in the response."
-        )
+        if use_prompt_fixes():
+            content = content.replace(original_format, updated_format)
+            content = content.replace(
+                "You SHOULD NOT include any other text in the response.",
+                "Make sure to also include module name as part of the output when applicable. E.g., triangle_properties.get instead of just get.\n"
+                "You SHOULD NOT include any other text in the response."
+            )
         original_input_format = "Here is a list of functions in JSON format that you can invoke."
         updated_input_format = f"Here is a list of functions in JSON format that you can invoke.\n{FUNCTION_DEF_START}"
         content = strict_replace(content, original_input_format, updated_input_format)
@@ -213,6 +236,9 @@ def _parse_function_calls(code: str) -> list:
                 name: eval(value)
                 for name, value in function_call_.keyword_arguments.items()
             }
+            if not use_output_processing_fixes():
+                function_calls.append({name: arguments})
+                continue
             if (
                 not arguments and
                 function_call_.positional_arguments and
