@@ -1,7 +1,8 @@
 import csv
 from datetime import datetime
+import os
 from types import SimpleNamespace
-from typing import List
+from typing import List, Optional
 
 import typer
 from bfcl._llm_response_generation import main as generation_main
@@ -12,8 +13,8 @@ from bfcl.constants.eval_config import (
     RESULT_PATH,
     SCORE_PATH,
 )
+from bfcl.constants.model_config import MODEL_CONFIG_MAPPING
 from bfcl.eval_checker.eval_runner import main as evaluation_main
-from bfcl.model_handler.handler_map import HANDLER_MAP
 from dotenv import load_dotenv
 from tabulate import tabulate
 
@@ -77,7 +78,7 @@ def models():
     List available models.
     """
     table = tabulate(
-        [[model] for model in HANDLER_MAP.keys()],
+        [[model] for model in MODEL_CONFIG_MAPPING.keys()],
         tablefmt="plain",
         colalign=("left",),
     )
@@ -118,6 +119,11 @@ def generate(
         "--skip-server-setup",
         help="Skip vLLM/SGLang server setup and use existing endpoint specified by the VLLM_ENDPOINT and VLLM_PORT environment variables.",
     ),
+    local_model_path: Optional[str] = typer.Option(
+        None,
+        "--local-model-path",
+        help="Specify the path to a local directory containing the model's config/tokenizer/weights for fully offline inference. Use this only if the model weights are stored in a location other than the default HF_HOME directory.",
+    ),
     result_dir: str = typer.Option(
         RESULT_PATH,
         "--result-dir",
@@ -150,6 +156,7 @@ def generate(
         gpu_memory_utilization=gpu_memory_utilization,
         backend=backend,
         skip_server_setup=skip_server_setup,
+        local_model_path=local_model_path,
         result_dir=result_dir,
         allow_overwrite=allow_overwrite,
         run_ids=run_ids,
@@ -180,9 +187,9 @@ def results(
         Returns:
             str: The original name of the model.
         """
-        if name not in HANDLER_MAP:
+        if name not in MODEL_CONFIG_MAPPING:
             candidate = name.replace("_", "/")
-            if candidate in HANDLER_MAP:
+            if candidate in MODEL_CONFIG_MAPPING:
                 return candidate
             print(f"Unknown model name: {name}")
         return name
@@ -226,12 +233,6 @@ def evaluate(
         help="A list of test categories to run the evaluation on.",
         callback=handle_multiple_input
     ),
-    api_sanity_check: bool = typer.Option(
-        False,
-        "--api-sanity-check",
-        "-c",
-        help="Perform the REST API status sanity check before running the evaluation.",
-    ),
     result_dir: str = typer.Option(
         None,
         "--result-dir",
@@ -248,7 +249,7 @@ def evaluate(
     """
 
     load_dotenv(dotenv_path=DOTENV_PATH, verbose=True, override=True)  # Load the .env file
-    evaluation_main(model, test_category, api_sanity_check, result_dir, score_dir)
+    evaluation_main(model, test_category, result_dir, score_dir)
 
 
 @cli.command()
