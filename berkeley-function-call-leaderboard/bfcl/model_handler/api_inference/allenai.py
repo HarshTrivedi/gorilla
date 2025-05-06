@@ -38,7 +38,7 @@ def use_output_processing_fixes():
 
 
 def get_allenai_handler():
-    call_format = os.getenv("CALL_FORMAT")
+    call_format = os.getenv("CALL_FORMAT", "bfcl")
     if call_format == "bfcl":
         return AllenAIHandler
     if call_format == "json":
