@@ -2,6 +2,7 @@ import os
 import json
 from dataclasses import dataclass
 from typing import Any
+import copy
 from dotenv import load_dotenv
 
 import libcst as cst
@@ -27,6 +28,10 @@ def verbose_logs():
 
 def use_environment_role():
     return str(os.getenv("USE_ENVIRONMENT_ROLE")) in ("True", "1")
+
+
+def use_xlam_function_definition_fixes():
+    return str(os.getenv("USE_XLAM_FUNCTION_DEFINITION_FIXES")) in ("True", "1")
 
 
 def use_prompt_fixes():
@@ -80,11 +85,12 @@ class AllenAIHandler(OpenAIHandler):
         for message in inference_data["message"]:
             role = get_(message, "role")
             content = get_(message, "content")
-            if use_environment_role() and role == "user" and "'role': 'tool'" in content:
+            # TODO: add get_allenai_handler() != "bfcl" in this line so that bfcl is exactly the original handler.
+            if get_allenai_handler() != "bfcl" and use_environment_role() and role == "user" and "'role': 'tool'" in content:
                 array = [str(item['content'] if item['content'] != 'None' else '') for item in eval(content)]
                 content = "\n".join([item for item in array if item])
                 set_(message, "content", content)
-                set_(message, "role", "environment")
+                set_(message, "role", "environment")  # TODO: Can make it configurable, e.g., ipython for llama.
             updated_messages.append(message)
             if verbose_logs():
                 role = get_(message, "role")
@@ -116,6 +122,8 @@ class AllenAICodeHandler(AllenAIHandler):
         functions: list = test_entry["function"]
         test_category: str = test_entry["id"].rsplit("_", 1)[0]
         functions = func_doc_language_specific_pre_processing(functions, test_category)
+        if use_xlam_function_definition_fixes():
+            functions = change_to_xlam_function_definition(functions)
         test_entry["question"][0] = system_prompt_pre_processing_chat_model(
             test_entry["question"][0], functions, test_category
         )
@@ -189,6 +197,8 @@ class AllenAIJsonHandler(AllenAIHandler):
         functions: list = test_entry["function"]
         test_category: str = test_entry["id"].rsplit("_", 1)[0]
         functions = func_doc_language_specific_pre_processing(functions, test_category)
+        if use_xlam_function_definition_fixes():
+            functions = change_to_xlam_function_definition(functions)
         test_entry["question"][0] = system_prompt_pre_processing_chat_model(
             test_entry["question"][0], functions, test_category
         )
@@ -266,6 +276,14 @@ def _parse_function_calls(code: str) -> list:
             function_calls.append({name: arguments})
     assert len(function_calls) == len(code.strip().splitlines())
     return function_calls
+
+
+def change_to_xlam_function_definition(functions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    functions = copy.deepcopy(functions)
+    for function in functions:
+        function["parameters"] = function["parameters"]["properties"]
+        # TODO: Need to handle/check required / default: function["parameters"]["required"]
+    return functions
 
 
 @dataclass
