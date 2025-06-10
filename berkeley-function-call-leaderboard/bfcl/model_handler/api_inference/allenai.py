@@ -3,6 +3,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 import copy
+import re
 from dotenv import load_dotenv
 
 import libcst as cst
@@ -231,7 +232,13 @@ def strict_replace(text: str, old: str, new: str) -> str:
     return text.replace(old, new)
 
 
+def remove_think_tags(text: str) -> str:
+    pattern = r"<think>.*?</think>"
+    return re.sub(pattern, "", text)
+
+
 def _parse_function_calls(code: str) -> list:
+    code = remove_think_tags(code)
     for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
         code = code.replace(token, "")
     function_calls = []
