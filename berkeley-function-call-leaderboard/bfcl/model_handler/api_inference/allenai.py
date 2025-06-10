@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 import copy
 from dotenv import load_dotenv
-
+from pathlib import Path
 import libcst as cst
 from libcst import CSTNode
 
@@ -79,9 +79,11 @@ class AllenAIHandler(OpenAIHandler):
             else:
                 data[key] = value
 
+        log_content = ""
+        output_file_path = Path("result") / self.model_name.replace("/", "_") / "log.txt"
+
         updated_messages = []
-        if verbose_logs():
-            print("\n\n\n\n")
+        log_content += "\n\n\n\n\n"
         for message in inference_data["message"]:
             role = get_(message, "role")
             content = get_(message, "content")
@@ -92,19 +94,24 @@ class AllenAIHandler(OpenAIHandler):
                 set_(message, "content", content)
                 set_(message, "role", "environment")  # TODO: Can make it configurable, e.g., ipython for llama.
             updated_messages.append(message)
-            if verbose_logs():
-                role = get_(message, "role")
-                content = get_(message, "content")
-                print(f">>>>>>> role='{role}' (content v) >>>>>>>")
-                print(content)
-                print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
-                print()
+            role = get_(message, "role")
+            content = get_(message, "content")
+            log_content += (f">>>>>>> role='{role}' (content v) >>>>>>>\n")
+            log_content += (content) + "\n"
+            log_content += ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
+            log_content += "\n"
         inference_data["message"] = updated_messages
         output = super()._query_prompting(inference_data)
+        log_content += ("\n>>>>>>> output message >>>>>>>\n")
+        log_content += str(dict(get_(get_(output[0], "choices")[0], "message"))) + "\n"
+        log_content += ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
+
         if verbose_logs():
-            print("\n>>>>>>> output message >>>>>>>")
-            print(dict(get_(get_(output[0], "choices")[0], "message")))
-            print("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+            print(log_content)
+
+        with open(output_file_path, "a") as file:
+            file.write(log_content)
+
         return output
 
 
