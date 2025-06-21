@@ -7,8 +7,10 @@ from dotenv import load_dotenv
 from pathlib import Path
 import libcst as cst
 from libcst import CSTNode
+from overrides import override
 
 from bfcl.model_handler.api_inference.openai import OpenAIHandler
+from bfcl.model_handler.local_inference.base_oss_handler import OSSHandler
 from bfcl.model_handler.model_style import ModelStyle
 from bfcl.model_handler.utils import func_doc_language_specific_pre_processing, system_prompt_pre_processing_chat_model, decoded_output_to_execution_list
 from openai import OpenAI
@@ -55,20 +57,50 @@ def get_allenai_handler():
     )
 
 
-class AllenAIHandler(OpenAIHandler):
+def get_base_handler():
+    base_handler_name = os.getenv("BASE_HANDLER", "openai")
+    if base_handler_name == "openai":
+        return OpenAIHandler
+    elif base_handler_name == "oss":
+        return OSSHandler
+    raise ValueError(
+        f"BASE_HANDLER should be either 'openai' or 'oss', but got {base_handler_name}"
+    )
+
+
+BASE_HANDLER_CLASS = get_base_handler()
+
+
+class AllenAIHandler(BASE_HANDLER_CLASS):
     def __init__(self, model_name, temperature) -> None:
         super().__init__(model_name, temperature)
-        self.model_style = ModelStyle.OpenAI
-        host = os.getenv("VLLM_ENDPOINT")  # reusing VLLM env vars without creating new ones.
-        port = os.getenv("VLLM_PORT")  # set them in .env
-        self.client = OpenAI(base_url=f"http://{host}:{port}/v1")
-        self.is_fc_model = False
+        if BASE_HANDLER_CLASS == OpenAIHandler:
+            self.base_handler_name = "openai"
+            self.model_style = ModelStyle.OpenAI
+            host = os.getenv("VLLM_ENDPOINT")  # reusing VLLM env vars without creating new ones.
+            port = os.getenv("VLLM_PORT")  # set them in .env
+            self.client = OpenAI(base_url=f"http://{host}:{port}/v1")
+            self.is_fc_model = False
+        else:
+            self.base_handler_name = "oss"
+            # TODO: See if anything is required here.
 
+    @override
     def decode_execute(self, result):
         output = self.decode_ast(result, language="Python")
         output = decoded_output_to_execution_list(output)
         return output
 
+    @override
+    def _format_prompt(self, messages, function):
+        # TODO[IMP]: Need to update it to use our chat template.
+        formatted_prompt = "<s>"
+        for message in messages:
+            formatted_prompt += f"<|im_start|>{message['role']}\n{message['content']}<|im_end|>\n"
+        formatted_prompt += "<|im_start|>assistant\n"
+        return formatted_prompt
+
+    @override
     def _query_prompting(self, inference_data: dict):
         def get_(data, key):
             return getattr(data, key) if hasattr(data, key) else data[key]
@@ -101,9 +133,13 @@ class AllenAIHandler(OpenAIHandler):
             log_content += ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
             log_content += "\n"
         inference_data["message"] = updated_messages
+        inference_data["function"] = ""  # TODO: Temporary fix.
         output = super()._query_prompting(inference_data)
         log_content += ("\n>>>>>>> output message >>>>>>>\n")
-        log_content += str(dict(get_(get_(output[0], "choices")[0], "message"))) + "\n"
+        if self.base_handler_name == "openai":
+            log_content += str(dict(get_(get_(output[0], "choices")[0], "message"))) + "\n"
+        else:
+            log_content = str(get_(output[0], "choices")[0].dict()) + "\n"
         log_content += ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
 
         if verbose_logs():
@@ -117,6 +153,7 @@ class AllenAIHandler(OpenAIHandler):
 
 class AllenAICodeHandler(AllenAIHandler):
 
+    @override
     def decode_ast(self, result, language="Python"):
         try:
             output = _parse_function_calls(result)
@@ -125,6 +162,7 @@ class AllenAICodeHandler(AllenAIHandler):
             raise e
         return output
 
+    @override
     def _pre_query_processing_prompting(self, test_entry: dict) -> dict:
         functions: list = test_entry["function"]
         test_category: str = test_entry["id"].rsplit("_", 1)[0]
@@ -174,6 +212,8 @@ class AllenAICodeHandler(AllenAIHandler):
 
 
 class AllenAIJsonHandler(AllenAIHandler):
+
+    @override
     def decode_ast(self, result, language="Python"):
         for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
             result = result.replace(token, "")
@@ -200,6 +240,7 @@ class AllenAIJsonHandler(AllenAIHandler):
 
         return super().decode_ast(result)
 
+    @override
     def _pre_query_processing_prompting(self, test_entry: dict) -> dict:
         functions: list = test_entry["function"]
         test_category: str = test_entry["id"].rsplit("_", 1)[0]

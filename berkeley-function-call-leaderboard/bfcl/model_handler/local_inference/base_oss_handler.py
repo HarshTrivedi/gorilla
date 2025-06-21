@@ -105,6 +105,10 @@ class OSSHandler(BaseHandler, EnforceOverrides):
                 "trust_remote_code": True,
             }
 
+        hf_token = os.getenv("HF_TOKEN", None)
+        if hf_token:
+            load_kwargs["token"] = hf_token
+
         self.tokenizer = AutoTokenizer.from_pretrained(**load_kwargs)
         config = AutoConfig.from_pretrained(**load_kwargs)
 
@@ -121,6 +125,10 @@ class OSSHandler(BaseHandler, EnforceOverrides):
 
         if not skip_server_setup:
             if backend == "vllm":
+                extra_args = []
+                revision_flag = os.getenv("MODEL_REVISION", None)
+                if revision_flag:
+                    extra_args = ["--revision", revision_flag]
                 process = subprocess.Popen(
                     [
                         "vllm",
@@ -135,7 +143,7 @@ class OSSHandler(BaseHandler, EnforceOverrides):
                         "--gpu-memory-utilization",
                         str(gpu_memory_utilization),
                         "--trust-remote-code",
-                    ],
+                    ] + extra_args,
                     stdout=subprocess.PIPE,  # Capture stdout
                     stderr=subprocess.PIPE,  # Capture stderr
                     text=True,  # To get the output as text instead of bytes
