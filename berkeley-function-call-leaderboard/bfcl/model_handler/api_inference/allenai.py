@@ -74,16 +74,15 @@ BASE_HANDLER_CLASS = get_base_handler()
 class AllenAIHandler(BASE_HANDLER_CLASS):
     def __init__(self, model_name, temperature) -> None:
         super().__init__(model_name, temperature)
-        if BASE_HANDLER_CLASS == OpenAIHandler:
-            self.base_handler_name = "openai"
+        if BASE_HANDLER_CLASS is OpenAIHandler:
             self.model_style = ModelStyle.OpenAI
             host = os.getenv("VLLM_ENDPOINT")  # reusing VLLM env vars without creating new ones.
             port = os.getenv("VLLM_PORT")  # set them in .env
             self.client = OpenAI(base_url=f"http://{host}:{port}/v1")
             self.is_fc_model = False
         else:
-            self.base_handler_name = "oss"
             # TODO: See if anything is required here.
+            pass
 
     @override
     def decode_execute(self, result):
@@ -91,7 +90,6 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
         output = decoded_output_to_execution_list(output)
         return output
 
-    @override
     def _format_prompt(self, messages, function):
         # TODO[IMP]: Need to update it to use our chat template.
         formatted_prompt = "<s>"
@@ -99,6 +97,9 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
             formatted_prompt += f"<|im_start|>{message['role']}\n{message['content']}<|im_end|>\n"
         formatted_prompt += "<|im_start|>assistant\n"
         return formatted_prompt
+
+    if BASE_HANDLER_CLASS is OSSHandler:
+        _format_prompt = override(_format_prompt)
 
     @override
     def _query_prompting(self, inference_data: dict):
@@ -136,7 +137,7 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
         inference_data["function"] = ""  # TODO: Temporary fix.
         output = super()._query_prompting(inference_data)
         log_content += ("\n>>>>>>> output message >>>>>>>\n")
-        if self.base_handler_name == "openai":
+        if BASE_HANDLER_CLASS is OpenAIHandler:
             log_content += str(dict(get_(get_(output[0], "choices")[0], "message"))) + "\n"
         else:
             log_content = str(get_(output[0], "choices")[0].dict()) + "\n"
