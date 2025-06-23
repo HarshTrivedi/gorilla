@@ -113,7 +113,6 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
                 data[key] = value
 
         log_content = ""
-        output_file_path = Path("result") / self.model_name.replace("/", "_") / "log.txt"
 
         updated_messages = []
         log_content += "\n\n\n\n\n"
@@ -146,8 +145,11 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
         if verbose_logs():
             print(log_content)
 
-        with open(output_file_path, "a") as file:
-            file.write(log_content)
+        # TODO: Commenting this out for now as Path("result") may not be the right output directory,
+        # in the case of running bfcl from a different directory.
+        # output_file_path = Path("result") / self.model_name.replace("/", "_") / "log.txt"
+        # with open(output_file_path, "a") as file:
+        #     file.write(log_content)
 
         return output
 
