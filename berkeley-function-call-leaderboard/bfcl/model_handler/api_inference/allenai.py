@@ -91,11 +91,27 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
         return output
 
     def _format_prompt(self, messages, function):
-        # TODO[IMP]: Need to update it to use our chat template.
-        formatted_prompt = "<s>"
-        for message in messages:
-            formatted_prompt += f"<|im_start|>{message['role']}\n{message['content']}<|im_end|>\n"
-        formatted_prompt += "<|im_start|>assistant\n"
+        formatted_prompt = ""
+        for i, message in enumerate(messages):
+            if message['role'] == 'system':
+                formatted_prompt += '<|system|>\n' + message['content'] + '\n'
+                if message.get('functions', None) is not None:
+                    formatted_prompt += '<functions>' + message['functions'] + '</functions>' + '\n'
+            elif message['role'] == 'user':
+                formatted_prompt += '<|user|>\n' + message['content'] + '\n'
+                if message.get('functions', None) is not None:
+                    formatted_prompt += '<functions>' + message['functions'] + '</functions>' + '\n'
+            elif message['role'] == 'assistant':
+                formatted_prompt += '<|assistant|>\n'
+                if message.get('content', None) is not None:
+                    formatted_prompt += message['content']
+                if message.get('function_calls', None) is not None:
+                    formatted_prompt += '<function_calls>' + message['function_calls'] + '</function_calls>'
+                formatted_prompt += '<|end_of_text|>' if i == len(messages) - 1 else '<|end_of_turn|>\n'
+            elif message['role'] == 'environment':
+                formatted_prompt += '<|environment|>\n' + message['content'] + '\n'
+        # add generation prompt
+        formatted_prompt += '<|assistant|>\n'
         return formatted_prompt
 
     if BASE_HANDLER_CLASS is OSSHandler:
