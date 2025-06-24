@@ -108,7 +108,11 @@ class OSSHandler(BaseHandler, EnforceOverrides):
         hf_token = os.getenv("HF_TOKEN", None)
         if hf_token:
             load_kwargs["token"] = hf_token
-
+        
+        revision_flag = os.getenv("MODEL_REVISION", None)
+        if revision_flag:
+            load_kwargs["revision"] = revision_flag
+        
         self.tokenizer = AutoTokenizer.from_pretrained(**load_kwargs)
         config = AutoConfig.from_pretrained(**load_kwargs)
 
@@ -126,7 +130,6 @@ class OSSHandler(BaseHandler, EnforceOverrides):
         if not skip_server_setup:
             if backend == "vllm":
                 extra_args = []
-                revision_flag = os.getenv("MODEL_REVISION", None)
                 if revision_flag:
                     extra_args = ["--revision", revision_flag]
                 process = subprocess.Popen(
