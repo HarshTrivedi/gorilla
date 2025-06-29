@@ -15,4 +15,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml .
 RUN pip install .
+RUN pip install "vllm==0.8.5.post1"
 COPY . /stage
