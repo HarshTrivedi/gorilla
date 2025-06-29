@@ -108,6 +108,9 @@ class OSSHandler(BaseHandler, EnforceOverrides):
         hf_token = os.getenv("HF_TOKEN", None)
         if hf_token:
             load_kwargs["token"] = hf_token
+        model_revision = os.getenv("MODEL_REVISION", None)
+        if model_revision:
+            load_kwargs["revision"] = model_revision
 
         self.tokenizer = AutoTokenizer.from_pretrained(**load_kwargs)
         config = AutoConfig.from_pretrained(**load_kwargs)
