@@ -15,5 +15,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml .
 RUN pip install . && pip cache purge
-RUN pip install "vllm==0.8.5.post1" && pip cache purge
+# RUN pip install "vllm==0.8.5.post1" && pip cache purge
 COPY . /stage
