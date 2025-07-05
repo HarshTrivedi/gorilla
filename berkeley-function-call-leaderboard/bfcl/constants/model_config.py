@@ -827,6 +827,18 @@ api_inference_model_map = {
         is_fc_model=False,
         underscore_to_dot=False,
     ),
+    "allenai/open_instruct_dev": ModelConfig(
+        model_name="allenai/open_instruct_dev",
+        display_name="allenai/open_instruct_dev (Prompt)",
+        url="https://www.allenai.org/",
+        org="AllenAI",
+        license="Open",
+        model_handler=get_allenai_handler(),
+        input_price=None,
+        output_price=None,
+        is_fc_model=False,
+        underscore_to_dot=False,
+    ),
 }
 
 
