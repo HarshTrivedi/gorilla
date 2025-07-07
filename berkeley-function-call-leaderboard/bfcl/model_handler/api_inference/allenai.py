@@ -107,8 +107,8 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
                     formatted_prompt += message['content']
                 if message.get('function_calls', None) is not None:
                     formatted_prompt += '<function_calls>' + message['function_calls'] + '</function_calls>'
-                formatted_prompt += '<|end_of_text|>' if i == len(messages) - 1 else '<|end_of_turn|>\n'
-            elif message['role'] == 'environment':
+                formatted_prompt += '<|end_of_text|>' if i == len(messages) - 1 else '<|end_of_text|>\n'
+            elif message['role'] == "tool":
                 formatted_prompt += '<|environment|>\n' + message['content'] + '\n'
         # add generation prompt
         formatted_prompt += '<|assistant|>\n'
