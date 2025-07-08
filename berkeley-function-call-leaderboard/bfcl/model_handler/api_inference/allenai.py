@@ -234,7 +234,7 @@ def strict_replace(text: str, old: str, new: str) -> str:
 
 def remove_think_tags(text: str) -> str:
     pattern = r"<think>.*?</think>"
-    return re.sub(pattern, "", text)
+    return re.sub(pattern, "", text, flags=re.DOTALL)
 
 
 def _parse_function_calls(code: str) -> list:
