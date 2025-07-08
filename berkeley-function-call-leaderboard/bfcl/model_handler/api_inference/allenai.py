@@ -3,8 +3,8 @@ import json
 from dataclasses import dataclass
 from typing import Any
 import copy
+import re
 from dotenv import load_dotenv
-from pathlib import Path
 import libcst as cst
 from libcst import CSTNode
 from overrides import override
@@ -20,6 +20,12 @@ FUNCTION_CALL_START = "<function_calls>"
 FUNCTION_CALL_END = "</function_calls>"
 FUNCTION_DEF_START = "<functions>"
 FUNCTION_DEF_END = "</functions>"
+THINK_TAG_START = "<think>"
+THINK_TAG_END = "</think>"
+THINKING_SYSTEM_PROMPT_PREFIX = (
+    "\nYou need to first think about the reasoning process in the mind and then call one or more functions to assist with the user query.\n"
+    "The reasoning process should be enclosed within <think> </think> tags. For instance, the output with thinking should look like this:\n\n"
+)
 
 load_dotenv()
 
@@ -42,6 +48,10 @@ def use_prompt_fixes():
 
 def use_output_processing_fixes():
     return str(os.getenv("USE_OUTPUT_PROCESSING_FIXES")) in ("True", "1")
+
+
+def use_thinking():
+    return str(os.getenv("USE_THINKING")) in ("True", "1")
 
 
 def get_allenai_handler():
@@ -226,6 +236,12 @@ class AllenAICodeHandler(AllenAIHandler):
         updated_input_format = f"Here is a list of functions in JSON format that you can invoke.\n{FUNCTION_DEF_START}"
         content = strict_replace(content, original_input_format, updated_input_format)
         content = content.rstrip() + f"\n{FUNCTION_DEF_END}\n"
+
+        if use_thinking():
+            function_calling_output_format = updated_output_format if use_prompt_fixes() else original_output_format
+            thinking_suffix = THINKING_SYSTEM_PROMPT_PREFIX + function_calling_output_format
+            content += thinking_suffix
+
         test_entry["question"][0][0]["content"] = content
         return {"message": []}
 
@@ -288,6 +304,12 @@ class AllenAIJsonHandler(AllenAIHandler):
         updated_input_format = f"Here is a list of functions in JSON format that you can invoke.\n{FUNCTION_DEF_START}"
         content = strict_replace(content, original_input_format, updated_input_format)
         content = content.rstrip() + f"\n{FUNCTION_DEF_END}\n"
+
+        if use_thinking():
+            function_calling_format = updated_format if use_prompt_fixes() else original_format
+            thinking_suffix = THINKING_SYSTEM_PROMPT_PREFIX + function_calling_format
+            content += thinking_suffix
+
         test_entry["question"][0][0]["content"] = content
         return {"message": []}
 
@@ -298,7 +320,14 @@ def strict_replace(text: str, old: str, new: str) -> str:
     return text.replace(old, new)
 
 
+def remove_think_tags(text: str) -> str:
+    pattern = rf"{THINK_TAG_START}.*?{THINK_TAG_END}"
+    return re.sub(pattern, "", text, flags=re.DOTALL)
+
+
 def _parse_function_calls(code: str) -> list:
+    if use_thinking():
+        code = remove_think_tags(code)
     for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
         code = code.replace(token, "")
     function_calls = []
