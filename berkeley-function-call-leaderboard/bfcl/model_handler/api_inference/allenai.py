@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 import copy
 import re
+import socket
 from dotenv import load_dotenv
 import libcst as cst
 from libcst import CSTNode
@@ -23,8 +24,9 @@ FUNCTION_DEF_END = "</functions>"
 THINK_TAG_START = "<think>"
 THINK_TAG_END = "</think>"
 THINKING_SYSTEM_PROMPT_PREFIX = (
-    "\nYou need to first think about the reasoning process in the mind and then call one or more functions to assist with the user query.\n"
+    "\nYou can also first think about the reasoning process in the mind and then call one or more functions to assist with the user query.\n"
     "The reasoning process should be enclosed within <think> </think> tags. For instance, the output with thinking should look like this:\n\n"
+    f"{THINK_TAG_START}\nyour reasoning here\n{THINK_TAG_END}"
 )
 
 load_dotenv()
@@ -78,6 +80,13 @@ def get_base_handler():
     )
 
 
+# def get_free_port():
+#     """Find a free port on the local machine."""
+#     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+#         s.bind(('', 0))  # Bind to an available port
+#         return s.getsockname()[1]
+
+
 BASE_HANDLER_CLASS = get_base_handler()
 
 
@@ -90,9 +99,12 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
             port = os.getenv("VLLM_PORT")  # set them in .env
             self.client = OpenAI(base_url=f"http://{host}:{port}/v1")
             self.is_fc_model = False
-        else:
-            # TODO: See if anything is required here.
-            pass
+        # elif BASE_HANDLER_CLASS is OSSHandler:
+        #     vllm_port = os.environ.get("VLLM_PORT", "")
+        #     if not vllm_port:
+        #         vllm_port = str(get_free_port())
+        #     os.environ["VLLM_PORT"] = vllm_port
+        #     self.vllm_port = vllm_port
 
     @override
     def decode_execute(self, result):
@@ -240,7 +252,14 @@ class AllenAICodeHandler(AllenAIHandler):
         if use_thinking():
             function_calling_output_format = updated_output_format if use_prompt_fixes() else original_output_format
             thinking_suffix = THINKING_SYSTEM_PROMPT_PREFIX + function_calling_output_format
-            content += thinking_suffix
+            content = content.replace(
+                "You should only return the function calls in your response.",
+                ""
+            )
+            content = content.replace(
+                "You SHOULD NOT include any other text in the response.",
+                thinking_suffix + "\nYou SHOULD NOT include any other text in the response."
+            )
 
         test_entry["question"][0][0]["content"] = content
         return {"message": []}
@@ -308,7 +327,14 @@ class AllenAIJsonHandler(AllenAIHandler):
         if use_thinking():
             function_calling_format = updated_format if use_prompt_fixes() else original_format
             thinking_suffix = THINKING_SYSTEM_PROMPT_PREFIX + function_calling_format
-            content += thinking_suffix
+            content = content.replace(
+                "You should only return the function calls in your response.",
+                ""
+            )
+            content = content.replace(
+                "You SHOULD NOT include any other text in the response.",
+                thinking_suffix + "\nYou SHOULD NOT include any other text in the response."
+            )
 
         test_entry["question"][0][0]["content"] = content
         return {"message": []}
@@ -326,8 +352,7 @@ def remove_think_tags(text: str) -> str:
 
 
 def _parse_function_calls(code: str) -> list:
-    if use_thinking():
-        code = remove_think_tags(code)
+    code = remove_think_tags(code)
     for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
         code = code.replace(token, "")
     function_calls = []
