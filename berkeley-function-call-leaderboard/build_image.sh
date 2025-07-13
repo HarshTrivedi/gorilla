@@ -27,7 +27,7 @@ if [ "$HANDLER" = "oss" ]; then
   echo "Using Dockerfile for the OSS handler"
 elif [ "$HANDLER" = "openai" ]; then
   DOCKERFILE_ARG=""
-  IMAGE_PREFIX="bfcl"
+  IMAGE_PREFIX="bfcl-openai"
   echo "Using Dockerfile for the OpenAI handler"
 else
   echo "Unknown handler: $HANDLER"

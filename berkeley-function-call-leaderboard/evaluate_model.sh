@@ -122,8 +122,8 @@ echo "  USE_THINKING: $USE_THINKING"
 
 # Define the path to the YAML file
 if [ "$BASE_HANDLER" = "openai" ]; then
-  YAML_FILE_TEMPLATE="./evaluate_template.yaml"
-  YAML_FILE="./evaluate_copy_${VLLM_ENDPOINT}-${VLLM_PORT}-${TEST_CATEGORY}.yaml"
+  YAML_FILE_TEMPLATE="./evaluate_template_openai.yaml"
+  YAML_FILE="./evaluate_openai_copy_${VLLM_ENDPOINT}-${VLLM_PORT}-${TEST_CATEGORY}.yaml"
 elif [ "$BASE_HANDLER" = "oss" ]; then
   YAML_FILE_TEMPLATE="./evaluate_template_oss.yaml"
   YAML_FILE="./evaluate_oss_copy-${TEST_CATEGORY}.yaml"
