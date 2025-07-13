@@ -1,8 +1,13 @@
 #!/bin/bash
 
 if [ -z "$BASE_HANDLER" ]; then
-  echo "BASE_HANDLER environment variable is not set. Using default: openai."
-  BASE_HANDLER=openai
+  echo "BASE_HANDLER environment variable is not set. Using default: oss."
+  BASE_HANDLER=oss
+fi
+
+if [ "$BASE_HANDLER" != "oss" ] && [ "$BASE_HANDLER" != "openai" ]; then
+  echo "Error: BASE_HANDLER must be either 'oss' or 'openai'."
+  exit 1
 fi
 
 if [ -z "$IS_FT_MODEL" ]; then
@@ -38,8 +43,8 @@ if [ -z "$NUM_THREADS" ]; then
 fi
 
 if [ -z "$TEST_CATEGORY" ]; then
-  echo "TEST_CATEGORY environment variable is not set. Using default: single_turn."
-  TEST_CATEGORY=single_turn
+  echo "TEST_CATEGORY environment variable is not set. Using default: all categories."
+  TEST_CATEGORY="single_turn,multi_turn_base,multi_turn_miss_func,multi_turn_miss_param,multi_turn_long_context"
 fi
 
 if [ -z "$CALL_FORMAT" ]; then
@@ -119,9 +124,12 @@ echo "  USE_THINKING: $USE_THINKING"
 if [ "$BASE_HANDLER" = "openai" ]; then
   YAML_FILE_TEMPLATE="./evaluate_template.yaml"
   YAML_FILE="./evaluate_copy_${VLLM_ENDPOINT}-${VLLM_PORT}-${TEST_CATEGORY}.yaml"
-else
+elif [ "$BASE_HANDLER" = "oss" ]; then
   YAML_FILE_TEMPLATE="./evaluate_template_oss.yaml"
   YAML_FILE="./evaluate_oss_copy-${TEST_CATEGORY}.yaml"
+else
+  echo "Error: Unsupported BASE_HANDLER: $BASE_HANDLER. Supported handlers are 'openai' and 'oss'."
+  exit 1
 fi
 
 cp $YAML_FILE_TEMPLATE $YAML_FILE
