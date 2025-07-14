@@ -1,6 +1,6 @@
 version: v2
 budget: ai2/oe-adapt
-description: "BFCL Evaluation job (<TEST_CATEGORY>) for <MODEL_REVISION> with THINKING=<USE_THINKING> (<VLLM_ENDPOINT>:<VLLM_PORT>)"
+description: "BFCL Evaluation job (<TEST_CATEGORY>) for <MODEL_NAME>: <MODEL_REVISION> with THINKING=<USE_THINKING> (<VLLM_ENDPOINT>:<VLLM_PORT>)"
 tasks:
   - name: "bfcl-evals"
     image:
@@ -21,7 +21,7 @@ tasks:
       preemptible: false
     envVars:
       - name: MODEL_NAME
-        value: allenai/general-tool-use-dev
+        value: <MODEL_NAME>
       - name: BASE_HANDLER
         value: <BASE_HANDLER>
       - name: CALL_FORMAT

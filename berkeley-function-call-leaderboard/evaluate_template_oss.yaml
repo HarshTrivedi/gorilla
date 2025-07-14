@@ -1,6 +1,6 @@
 version: v2
 budget: ai2/oe-adapt
-description: "BFCL Evaluation job WITH OSS HANDLER (<TEST_CATEGORY>) for <MODEL_REVISION> with Thinking=<USE_THINKING>"
+description: "BFCL Evaluation job WITH OSS HANDLER (<TEST_CATEGORY>) for <MODEL_NAME>: <MODEL_REVISION> with Thinking=<USE_THINKING>"
 tasks:
   - name: "bfcl-evals"
     image:
@@ -24,7 +24,7 @@ tasks:
       preemptible: false
     envVars:
       - name: MODEL_NAME
-        value: allenai/general-tool-use-dev
+        value: <MODEL_NAME>
       - name: BASE_HANDLER
         value: <BASE_HANDLER>
       - name: CALL_FORMAT

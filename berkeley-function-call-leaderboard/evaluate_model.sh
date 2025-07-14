@@ -20,6 +20,11 @@ if [ -z "$MODEL_REVISION" ]; then
   exit 1
 fi
 
+if [ -z "$MODEL_NAME" ]; then
+  echo "MODEL_NAME environment variable is not set. Defaulting to 'allenai/general-tool-use-dev'."
+  MODEL_NAME="allenai/general-tool-use-dev"
+fi
+
 # If BASE_HANDLER is not openai, then VLLM_ENDPOINT and VLLM_PORT are not required.
 if [ "$BASE_HANDLER" != "openai" ]; then
   echo "BASE_HANDLER is not openai, so VLLM_ENDPOINT and VLLM_PORT are not required."
@@ -111,6 +116,7 @@ echo "  VLLM_ENDPOINT: $VLLM_ENDPOINT"
 echo "  VLLM_PORT: $VLLM_PORT"
 echo "  NUM_THREADS: $NUM_THREADS"
 echo "  TEST_CATEGORY: $TEST_CATEGORY"
+echo "  MODEL_NAME: $MODEL_NAME"
 echo "  MODEL_REVISION: $MODEL_REVISION"
 echo "  CALL_FORMAT: $CALL_FORMAT"
 echo "  IS_FT_MODEL: $IS_FT_MODEL"
@@ -139,6 +145,7 @@ sed -i.bak "s|<VLLM_ENDPOINT>|$VLLM_ENDPOINT|g" "$YAML_FILE"
 sed -i.bak "s|<VLLM_PORT>|$VLLM_PORT|g" "$YAML_FILE"
 sed -i.bak "s|<NUM_THREADS>|$NUM_THREADS|g" "$YAML_FILE"
 sed -i.bak "s|<TEST_CATEGORY>|$TEST_CATEGORY|g" "$YAML_FILE"
+sed -i.bak "s|<MODEL_NAME>|$MODEL_NAME|g" "$YAML_FILE"
 sed -i.bak "s|<MODEL_REVISION>|$MODEL_REVISION|g" "$YAML_FILE"
 sed -i.bak "s|<CALL_FORMAT>|$CALL_FORMAT|g" "$YAML_FILE"
 sed -i.bak "s|<USE_ENVIRONMENT_ROLE>|$USE_ENVIRONMENT_ROLE|g" "$YAML_FILE"
