@@ -5,6 +5,7 @@ from typing import Any
 import copy
 import re
 import socket
+import random
 from dotenv import load_dotenv
 import libcst as cst
 from libcst import CSTNode
@@ -90,6 +91,23 @@ def get_base_handler():
 BASE_HANDLER_CLASS = get_base_handler()
 
 
+def get_random_port():
+    return random.randint(49152, 65535)
+
+def is_port_free(port, host='127.0.0.1'):
+    """Returns True if the specified port is free on the given host, without blocking."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(5)  # short timeout to avoid blocking
+        result = sock.connect_ex((host, port))
+        return result != 0  # if connect_ex returns 0, the port is in use
+
+def get_random_free_port(max_attempts=20):
+    for _ in range(max_attempts):
+        port = random.randint(49152, 65535)
+        if is_port_free(port):
+            return port
+    raise RuntimeError("Failed to find a free port after several attempts.")
+
 class AllenAIHandler(BASE_HANDLER_CLASS):
     def __init__(self, model_name, temperature) -> None:
         super().__init__(model_name, temperature)
@@ -99,12 +117,13 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
             port = os.getenv("VLLM_PORT")  # set them in .env
             self.client = OpenAI(base_url=f"http://{host}:{port}/v1")
             self.is_fc_model = False
-        # elif BASE_HANDLER_CLASS is OSSHandler:
-        #     vllm_port = os.environ.get("VLLM_PORT", "")
-        #     if not vllm_port:
-        #         vllm_port = str(get_free_port())
-        #     os.environ["VLLM_PORT"] = vllm_port
-        #     self.vllm_port = vllm_port
+        elif BASE_HANDLER_CLASS is OSSHandler:
+            vllm_port = str(get_random_free_port())
+            print(f"Selected port: {vllm_port} for the VLLM server.")
+            self.vllm_port = vllm_port
+            self.base_url = f"http://{self.vllm_host}:{self.vllm_port}/v1"
+            print(f"Using VLLM server at {self.base_url}")
+            self.client = OpenAI(base_url=self.base_url, api_key="EMPTY")
 
     @override
     def decode_execute(self, result):
