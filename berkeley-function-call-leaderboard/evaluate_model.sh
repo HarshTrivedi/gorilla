@@ -25,6 +25,11 @@ if [ -z "$MODEL_NAME" ]; then
   MODEL_NAME="allenai/general-tool-use-dev"
 fi
 
+if [ -z "$MAX_TOKENS" ]; then
+  echo "MAX_TOKENS environment variable is not set. Using default: -1 (no limit)."
+  MAX_TOKENS=-1
+fi
+
 # If BASE_HANDLER is not openai, then VLLM_ENDPOINT and VLLM_PORT are not required.
 if [ "$BASE_HANDLER" != "openai" ]; then
   echo "BASE_HANDLER is not openai, so VLLM_ENDPOINT and VLLM_PORT are not required."
@@ -49,7 +54,7 @@ fi
 
 if [ -z "$TEST_CATEGORY" ]; then
   echo "TEST_CATEGORY environment variable is not set. Using default: all categories."
-  TEST_CATEGORY="single_turn,multi_turn_base,multi_turn_miss_func,multi_turn_miss_param,multi_turn_long_context"
+  TEST_CATEGORY="all"
 fi
 
 if [ -z "$CALL_FORMAT" ]; then
@@ -120,6 +125,7 @@ echo "  MODEL_NAME: $MODEL_NAME"
 echo "  MODEL_REVISION: $MODEL_REVISION"
 echo "  CALL_FORMAT: $CALL_FORMAT"
 echo "  IS_FT_MODEL: $IS_FT_MODEL"
+echo "  MAX_TOKENS: $MAX_TOKENS"
 echo "  USE_ENVIRONMENT_ROLE: $USE_ENVIRONMENT_ROLE"
 echo "  USE_PROMPT_FIXES: $USE_PROMPT_FIXES"
 echo "  USE_OUTPUT_PROCESSING_FIXES: $USE_OUTPUT_PROCESSING_FIXES"
@@ -147,6 +153,7 @@ sed -i.bak "s|<NUM_THREADS>|$NUM_THREADS|g" "$YAML_FILE"
 sed -i.bak "s|<TEST_CATEGORY>|$TEST_CATEGORY|g" "$YAML_FILE"
 sed -i.bak "s|<MODEL_NAME>|$MODEL_NAME|g" "$YAML_FILE"
 sed -i.bak "s|<MODEL_REVISION>|$MODEL_REVISION|g" "$YAML_FILE"
+sed -i.bak "s|<MAX_TOKENS>|$MAX_TOKENS|g" "$YAML_FILE"
 sed -i.bak "s|<CALL_FORMAT>|$CALL_FORMAT|g" "$YAML_FILE"
 sed -i.bak "s|<USE_ENVIRONMENT_ROLE>|$USE_ENVIRONMENT_ROLE|g" "$YAML_FILE"
 sed -i.bak "s|<USE_PROMPT_FIXES>|$USE_PROMPT_FIXES|g" "$YAML_FILE"

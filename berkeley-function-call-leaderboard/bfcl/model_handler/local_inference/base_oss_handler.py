@@ -341,6 +341,13 @@ class OSSHandler(BaseHandler, EnforceOverrides):
                 self.max_context_length - input_token_count - 2,
             )
 
+        if os.getenv("MAX_TOKENS", None) is not None:
+            max_tokens = int(os.getenv("MAX_TOKENS"))
+            if max_tokens <= 0:
+                max_tokens = self.max_context_length
+
+            leftover_tokens_count = max_tokens - input_token_count - 2
+
         extra_body = {}
         if hasattr(self, "stop_token_ids"):
             extra_body["stop_token_ids"] = self.stop_token_ids
