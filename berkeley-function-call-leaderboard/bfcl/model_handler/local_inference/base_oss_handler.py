@@ -343,10 +343,13 @@ class OSSHandler(BaseHandler, EnforceOverrides):
 
         if os.getenv("MAX_TOKENS", None) is not None:
             max_tokens = int(os.getenv("MAX_TOKENS"))
-            if max_tokens <= 0:
-                max_tokens = self.max_context_length
-
-            leftover_tokens_count = max_tokens - input_token_count - 2
+            if max_tokens < 0:
+                leftover_tokens_count = self.max_context_length - input_token_count - 2
+            elif max_tokens == 0:
+                # Use the previous calculated leftover_tokens_count that caps it at 4k tokens
+                leftover_tokens_count = leftover_tokens_count
+            else:
+                leftover_tokens_count = max_tokens - input_token_count - 2
 
         extra_body = {}
         if hasattr(self, "stop_token_ids"):

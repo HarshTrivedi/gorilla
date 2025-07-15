@@ -26,8 +26,8 @@ if [ -z "$MODEL_NAME" ]; then
 fi
 
 if [ -z "$MAX_TOKENS" ]; then
-  echo "MAX_TOKENS environment variable is not set. Using default: -1 (no limit)."
-  MAX_TOKENS=-1
+  echo "MAX_TOKENS environment variable is not set. Using default: 0 (use BFCL's internal logic that caps it at 4k). Set it to -1 to use model's max context length and a non-zero value for an arbitrary max_tokens"
+  MAX_TOKENS=0
 fi
 
 # If BASE_HANDLER is not openai, then VLLM_ENDPOINT and VLLM_PORT are not required.
