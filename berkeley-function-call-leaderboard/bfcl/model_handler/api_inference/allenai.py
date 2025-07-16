@@ -34,31 +34,31 @@ load_dotenv()
 
 
 def verbose_logs():
-    return str(os.getenv("VERBOSE")) in ("True", "1")
+    return str(os.getenv("VERBOSE", "True")) in ("True", "1")
 
 
 def use_environment_role():
-    return str(os.getenv("USE_ENVIRONMENT_ROLE")) in ("True", "1")
+    return str(os.getenv("USE_ENVIRONMENT_ROLE", "1")) in ("True", "1")
 
 
 def use_xlam_function_definition_fixes():
-    return str(os.getenv("USE_XLAM_FUNCTION_DEFINITION_FIXES")) in ("True", "1")
+    return str(os.getenv("USE_XLAM_FUNCTION_DEFINITION_FIXES", "1")) in ("True", "1")
 
 
 def use_prompt_fixes():
-    return str(os.getenv("USE_PROMPT_FIXES")) in ("True", "1")
+    return str(os.getenv("USE_PROMPT_FIXES", "1")) in ("True", "1")
 
 
 def use_output_processing_fixes():
-    return str(os.getenv("USE_OUTPUT_PROCESSING_FIXES")) in ("True", "1")
+    return str(os.getenv("USE_OUTPUT_PROCESSING_FIXES", "1")) in ("True", "1")
 
 
 def use_thinking():
-    return str(os.getenv("USE_THINKING")) in ("True", "1")
+    return str(os.getenv("USE_THINKING", "0")) in ("True", "1")
 
 
 def get_allenai_handler():
-    call_format = os.getenv("CALL_FORMAT", "bfcl")
+    call_format = os.getenv("CALL_FORMAT", "code")
     if call_format == "bfcl":
         return AllenAIHandler
     if call_format == "json":
@@ -71,7 +71,7 @@ def get_allenai_handler():
 
 
 def get_base_handler():
-    base_handler_name = os.getenv("BASE_HANDLER", "openai")
+    base_handler_name = os.getenv("BASE_HANDLER", "oss")
     if base_handler_name == "openai":
         return OpenAIHandler
     elif base_handler_name == "oss":
