@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from bfcl.model_handler.api_inference.allenai import get_allenai_handler
 from bfcl.model_handler.api_inference.claude import ClaudeHandler
 from bfcl.model_handler.api_inference.cohere import CohereHandler
 from bfcl.model_handler.api_inference.databricks import DatabricksHandler
@@ -21,6 +20,7 @@ from bfcl.model_handler.api_inference.nvidia import NvidiaHandler
 from bfcl.model_handler.api_inference.openai import OpenAIHandler
 from bfcl.model_handler.api_inference.writer import WriterHandler
 from bfcl.model_handler.api_inference.yi import YiHandler
+from bfcl.model_handler.local_inference.allenai import get_allenai_handler
 from bfcl.model_handler.local_inference.bielik import BielikHandler
 from bfcl.model_handler.local_inference.deepseek import DeepseekHandler
 from bfcl.model_handler.local_inference.deepseek_coder import DeepseekCoderHandler
