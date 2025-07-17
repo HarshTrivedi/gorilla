@@ -1,15 +1,5 @@
 #!/bin/bash
 
-if [ -z "$BASE_HANDLER" ]; then
-  echo "BASE_HANDLER environment variable is not set. Using default: oss."
-  BASE_HANDLER=oss
-fi
-
-if [ "$BASE_HANDLER" != "oss" ] && [ "$BASE_HANDLER" != "openai" ]; then
-  echo "Error: BASE_HANDLER must be either 'oss' or 'openai'."
-  exit 1
-fi
-
 if [ -z "$IS_FT_MODEL" ]; then
   echo "Error: IS_FT_MODEL environment variable is not set. This can lead to incorrect evaluation results! Set this variable to 0 if you are evaluating a non-finetuned (base, instruct, ...) model, and 1 if you are evaluating a model that we fine-tuned."
   exit 1
@@ -32,23 +22,6 @@ fi
 if [ -z "$MAX_TOKENS" ]; then
   echo "MAX_TOKENS environment variable is not set. Using default: 0 (use BFCL's internal logic that caps it at 4k). Set it to -1 to use model's max context length and a non-zero value for an arbitrary max_tokens"
   MAX_TOKENS=0
-fi
-
-# If BASE_HANDLER is not openai, then VLLM_ENDPOINT and VLLM_PORT are not required.
-if [ "$BASE_HANDLER" != "openai" ]; then
-  echo "BASE_HANDLER is not openai, so VLLM_ENDPOINT and VLLM_PORT are not required."
-  VLLM_ENDPOINT=""
-  VLLM_PORT=""
-else
-  if [ -z "$VLLM_ENDPOINT" ]; then
-    echo "Error: VLLM_ENDPOINT environment variable is not set."
-    exit 1
-  fi
-
-  if [ -z "$VLLM_PORT" ]; then
-    echo "Error: VLLM_PORT environment variable is not set."
-    exit 1
-  fi
 fi
 
 if [ -z "$NUM_THREADS" ]; then
@@ -120,9 +93,6 @@ fi
 
 # Print the configuration
 echo "Configuration:"
-echo "  BASE_HANDLER: $BASE_HANDLER"
-echo "  VLLM_ENDPOINT: $VLLM_ENDPOINT"
-echo "  VLLM_PORT: $VLLM_PORT"
 echo "  NUM_THREADS: $NUM_THREADS"
 echo "  TEST_CATEGORY: $TEST_CATEGORY"
 echo "  MODEL_NAME: $MODEL_NAME"
@@ -137,23 +107,11 @@ echo "  USE_OUTPUT_PROCESSING_FIXES: $USE_OUTPUT_PROCESSING_FIXES"
 echo "  USE_XLAM_FUNCTION_DEFINITION_FIXES: $USE_XLAM_FUNCTION_DEFINITION_FIXES"
 echo "  USE_THINKING: $USE_THINKING"
 
-# Define the path to the YAML file
-if [ "$BASE_HANDLER" = "openai" ]; then
-  YAML_FILE_TEMPLATE="./evaluate_template_openai.yaml"
-  YAML_FILE="./evaluate_openai_copy_${VLLM_ENDPOINT}-${VLLM_PORT}-${TEST_CATEGORY}.yaml"
-elif [ "$BASE_HANDLER" = "oss" ]; then
-  YAML_FILE_TEMPLATE="./evaluate_template_oss.yaml"
-  YAML_FILE="./evaluate_oss_copy-${TEST_CATEGORY}.yaml"
-else
-  echo "Error: Unsupported BASE_HANDLER: $BASE_HANDLER. Supported handlers are 'openai' and 'oss'."
-  exit 1
-fi
+YAML_FILE_TEMPLATE="./evaluate_template.yaml"
+YAML_FILE="./evaluate_copy-${TEST_CATEGORY}.yaml"
 
 cp $YAML_FILE_TEMPLATE $YAML_FILE
 # Perform platform-safe in-place replacements
-sed -i.bak "s|<BASE_HANDLER>|$BASE_HANDLER|g" "$YAML_FILE"
-sed -i.bak "s|<VLLM_ENDPOINT>|$VLLM_ENDPOINT|g" "$YAML_FILE"
-sed -i.bak "s|<VLLM_PORT>|$VLLM_PORT|g" "$YAML_FILE"
 sed -i.bak "s|<NUM_THREADS>|$NUM_THREADS|g" "$YAML_FILE"
 sed -i.bak "s|<TEST_CATEGORY>|$TEST_CATEGORY|g" "$YAML_FILE"
 sed -i.bak "s|<MODEL_NAME>|$MODEL_NAME|g" "$YAML_FILE"
