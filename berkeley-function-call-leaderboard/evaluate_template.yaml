@@ -1,6 +1,6 @@
 version: v2
 budget: ai2/oe-adapt
-description: "BFCL Evaluation job (<TEST_CATEGORY>) for <MODEL_NAME>: <MODEL_REVISION> with Thinking=<USE_THINKING> and MAX_TOKENS=<MAX_TOKENS>."
+description: "BFCL Evaluation job (<TEST_CATEGORY>) for <MODEL_NAME>: <MODEL_REVISION> with Thinking=<USE_THINKING>"
 tasks:
   - name: "bfcl-evals"
     image:
