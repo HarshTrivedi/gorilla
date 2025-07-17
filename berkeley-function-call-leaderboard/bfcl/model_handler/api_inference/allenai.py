@@ -154,6 +154,13 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
         #         formatted_prompt += '<|environment|>\n' + message['content'] + '\n'
         # # add generation prompt
         # formatted_prompt += '<|assistant|>\n'
+
+        messages = copy.deepcopy(messages)
+        for message in messages:
+            if message['role'] == "tool":
+                # Use our model specific role for tool output messages
+                message['role'] = "environment"
+
         formatted_prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         return formatted_prompt
 
