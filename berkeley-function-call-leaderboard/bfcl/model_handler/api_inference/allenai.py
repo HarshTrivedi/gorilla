@@ -132,6 +132,28 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
         return output
 
     def _format_prompt(self, messages, function):
+        # TODO: Keeping this commented out for now for reference (in case we notice performance disparities); this will be removed eventually
+        # formatted_prompt = ""
+        # for i, message in enumerate(messages):
+        #     if message['role'] == 'system':
+        #         formatted_prompt += '<|system|>\n' + message['content'] + '\n'
+        #         if message.get('functions', None) is not None:
+        #             formatted_prompt += '<functions>' + message['functions'] + '</functions>' + '\n'
+        #     elif message['role'] == 'user':
+        #         formatted_prompt += '<|user|>\n' + message['content'] + '\n'
+        #         if message.get('functions', None) is not None:
+        #             formatted_prompt += '<functions>' + message['functions'] + '</functions>' + '\n'
+        #     elif message['role'] == 'assistant':
+        #         formatted_prompt += '<|assistant|>\n'
+        #         if message.get('content', None) is not None:
+        #             formatted_prompt += message['content']
+        #         if message.get('function_calls', None) is not None:
+        #             formatted_prompt += '<function_calls>' + message['function_calls'] + '</function_calls>'
+        #         formatted_prompt += '<|end_of_text|>' if i == len(messages) - 1 else '<|end_of_text|>\n'
+        #     elif message['role'] == "tool":
+        #         formatted_prompt += '<|environment|>\n' + message['content'] + '\n'
+        # # add generation prompt
+        # formatted_prompt += '<|assistant|>\n'
         formatted_prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         return formatted_prompt
 
