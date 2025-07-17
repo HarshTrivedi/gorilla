@@ -11,9 +11,7 @@ import libcst as cst
 from libcst import CSTNode
 from overrides import override
 
-from bfcl.model_handler.api_inference.openai import OpenAIHandler
 from bfcl.model_handler.local_inference.base_oss_handler import OSSHandler
-from bfcl.model_handler.model_style import ModelStyle
 from bfcl.model_handler.utils import func_doc_language_specific_pre_processing, system_prompt_pre_processing_chat_model, decoded_output_to_execution_list
 from openai import OpenAI
 
@@ -70,36 +68,13 @@ def get_allenai_handler():
     )
 
 
-def get_base_handler():
-    base_handler_name = os.getenv("BASE_HANDLER", "oss")
-    if base_handler_name == "openai":
-        return OpenAIHandler
-    elif base_handler_name == "oss":
-        return OSSHandler
-    raise ValueError(
-        f"BASE_HANDLER should be either 'openai' or 'oss', but got {base_handler_name}"
-    )
-
-
-# def get_free_port():
-#     """Find a free port on the local machine."""
-#     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-#         s.bind(('', 0))  # Bind to an available port
-#         return s.getsockname()[1]
-
-
-BASE_HANDLER_CLASS = get_base_handler()
-
-
-def get_random_port():
-    return random.randint(49152, 65535)
-
 def is_port_free(port, host='127.0.0.1'):
     """Returns True if the specified port is free on the given host, without blocking."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(5)  # short timeout to avoid blocking
         result = sock.connect_ex((host, port))
         return result != 0  # if connect_ex returns 0, the port is in use
+
 
 def get_random_free_port(max_attempts=20):
     for _ in range(max_attempts):
@@ -108,22 +83,16 @@ def get_random_free_port(max_attempts=20):
             return port
     raise RuntimeError("Failed to find a free port after several attempts.")
 
-class AllenAIHandler(BASE_HANDLER_CLASS):
+
+class AllenAIHandler(OSSHandler):
     def __init__(self, model_name, temperature) -> None:
         super().__init__(model_name, temperature)
-        if BASE_HANDLER_CLASS is OpenAIHandler:
-            self.model_style = ModelStyle.OpenAI
-            host = os.getenv("VLLM_ENDPOINT")  # reusing VLLM env vars without creating new ones.
-            port = os.getenv("VLLM_PORT")  # set them in .env
-            self.client = OpenAI(base_url=f"http://{host}:{port}/v1")
-            self.is_fc_model = False
-        elif BASE_HANDLER_CLASS is OSSHandler:
-            vllm_port = str(get_random_free_port())
-            print(f"Selected port: {vllm_port} for the VLLM server.")
-            self.vllm_port = vllm_port
-            self.base_url = f"http://{self.vllm_host}:{self.vllm_port}/v1"
-            print(f"Using VLLM server at {self.base_url}")
-            self.client = OpenAI(base_url=self.base_url, api_key="EMPTY")
+        vllm_port = str(get_random_free_port())
+        print(f"Selected port: {vllm_port} for the VLLM server.")
+        self.vllm_port = vllm_port
+        self.base_url = f"http://{self.vllm_host}:{self.vllm_port}/v1"
+        print(f"Using VLLM server at {self.base_url}")
+        self.client = OpenAI(base_url=self.base_url, api_key="EMPTY")
 
     @override
     def decode_execute(self, result):
@@ -131,30 +100,8 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
         output = decoded_output_to_execution_list(output)
         return output
 
+    @override
     def _format_prompt(self, messages, function):
-        # TODO: Keeping this commented out for now for reference (in case we notice performance disparities); this will be removed eventually
-        # formatted_prompt = ""
-        # for i, message in enumerate(messages):
-        #     if message['role'] == 'system':
-        #         formatted_prompt += '<|system|>\n' + message['content'] + '\n'
-        #         if message.get('functions', None) is not None:
-        #             formatted_prompt += '<functions>' + message['functions'] + '</functions>' + '\n'
-        #     elif message['role'] == 'user':
-        #         formatted_prompt += '<|user|>\n' + message['content'] + '\n'
-        #         if message.get('functions', None) is not None:
-        #             formatted_prompt += '<functions>' + message['functions'] + '</functions>' + '\n'
-        #     elif message['role'] == 'assistant':
-        #         formatted_prompt += '<|assistant|>\n'
-        #         if message.get('content', None) is not None:
-        #             formatted_prompt += message['content']
-        #         if message.get('function_calls', None) is not None:
-        #             formatted_prompt += '<function_calls>' + message['function_calls'] + '</function_calls>'
-        #         formatted_prompt += '<|end_of_text|>' if i == len(messages) - 1 else '<|end_of_text|>\n'
-        #     elif message['role'] == "tool":
-        #         formatted_prompt += '<|environment|>\n' + message['content'] + '\n'
-        # # add generation prompt
-        # formatted_prompt += '<|assistant|>\n'
-
         messages = copy.deepcopy(messages)
         for message in messages:
             if message['role'] == "tool":
@@ -163,9 +110,6 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
 
         formatted_prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         return formatted_prompt
-
-    if BASE_HANDLER_CLASS is OSSHandler:
-        _format_prompt = override(_format_prompt)
 
     @override
     def _query_prompting(self, inference_data: dict):
@@ -202,20 +146,11 @@ class AllenAIHandler(BASE_HANDLER_CLASS):
         inference_data["function"] = ""  # TODO: Temporary fix.
         output = super()._query_prompting(inference_data)
         log_content += ("\n>>>>>>> output message >>>>>>>\n")
-        if BASE_HANDLER_CLASS is OpenAIHandler:
-            log_content += str(dict(get_(get_(output[0], "choices")[0], "message"))) + "\n"
-        else:
-            log_content = str(get_(output[0], "choices")[0].dict()) + "\n"
+        log_content = str(get_(output[0], "choices")[0].dict()) + "\n"
         log_content += ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n")
 
         if verbose_logs():
             print(log_content)
-
-        # TODO: Commenting this out for now as Path("result") may not be the right output directory,
-        # in the case of running bfcl from a different directory.
-        # output_file_path = Path("result") / self.model_name.replace("/", "_") / "log.txt"
-        # with open(output_file_path, "a") as file:
-        #     file.write(log_content)
 
         return output
 
