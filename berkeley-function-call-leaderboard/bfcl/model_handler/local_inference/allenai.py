@@ -42,15 +42,6 @@ def use_environment_role():
 def use_xlam_function_definition_fixes():
     return str(os.getenv("USE_XLAM_FUNCTION_DEFINITION_FIXES", "1")) in ("True", "1")
 
-
-def use_prompt_fixes():
-    return str(os.getenv("USE_PROMPT_FIXES", "1")) in ("True", "1")
-
-
-def use_output_processing_fixes():
-    return str(os.getenv("USE_OUTPUT_PROCESSING_FIXES", "1")) in ("True", "1")
-
-
 def use_thinking():
     return str(os.getenv("USE_THINKING", "0")) in ("True", "1")
 
@@ -178,43 +169,13 @@ class AllenAICodeHandler(AllenAIHandler):
         )
         content = test_entry["question"][0][0]["content"]
         original_output_format = "[func_name1(params_name1=params_value1, params_name2=params_value2...), func_name2(params)]"
-        updated_output_format = (
-            f"\n{FUNCTION_CALL_START}\n"
-            "func_name1(params_name1=params_value1, params_name2=params_value2, ...)\n"
-            "module_name.func_name2(params_name3=params_value3, ...)\n"
-            f"{FUNCTION_CALL_END}\n"
-        )
-        if use_prompt_fixes():
-            content = strict_replace(content, original_output_format, updated_output_format)
-            content = strict_replace(
-                content,
-                "If none of the functions can be used, point it out.",
-                "If none of the functions can be used, point it out by returning no function calls (empty code)."
-            )
-            content = strict_replace(
-                content,
-                "If the given question lacks the parameters required by the function, also point it out.",
-                "If the given question lacks the parameters required by the function, also point it out by returning no function calls (empty code)."
-            )
-            content = strict_replace(
-                content,
-                "If you decide to invoke any of the function(s), you MUST put it in the format of",
-                "If you decide to invoke any of the function(s), you MUST output it in the following format:"
-            )
-            content = strict_replace(
-                content,
-                "you should try your best to complete the tasks requested by the user within the current turn.",
-                "you should try your best to complete the tasks requested by the user within the current turn. "
-                "If no function satisfies the requirement, return an empty code block as discussed above."
-            )
         original_input_format = "Here is a list of functions in JSON format that you can invoke."
         updated_input_format = f"Here is a list of functions in JSON format that you can invoke.\n{FUNCTION_DEF_START}"
         content = strict_replace(content, original_input_format, updated_input_format)
         content = content.rstrip() + f"\n{FUNCTION_DEF_END}\n"
 
         if use_thinking():
-            function_calling_output_format = updated_output_format if use_prompt_fixes() else original_output_format
-            thinking_suffix = THINKING_SYSTEM_PROMPT_PREFIX + function_calling_output_format
+            thinking_suffix = THINKING_SYSTEM_PROMPT_PREFIX + original_output_format
             content = content.replace(
                 "You should only return the function calls in your response.",
                 ""
@@ -235,26 +196,6 @@ class AllenAIJsonHandler(AllenAIHandler):
         for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
             result = result.replace(token, "")
 
-        if not use_output_processing_fixes():
-            return super().decode_ast(result)
-
-        # Try a few different ways to make it work
-        try:
-            return _parse_function_calls(result)
-        except Exception:
-            pass
-
-        try:
-            parsed = json.loads(result)
-        except json.JSONDecodeError:
-            try:
-                parsed = eval(result)
-            except Exception:  # Temporary hack
-                return super().decode_ast(result)
-
-        if isinstance(parsed, list) and all("name" in item and "arguments" in item  for item in parsed):
-            return [{item["name"]: item["arguments"]} for item in parsed]
-
         return super().decode_ast(result)
 
     @override
@@ -269,27 +210,13 @@ class AllenAIJsonHandler(AllenAIHandler):
         )
         content = test_entry["question"][0][0]["content"]
         original_format = "[func_name1(params_name1=params_value1, params_name2=params_value2...), func_name2(params)]"
-        updated_format = (
-            f"\n{FUNCTION_CALL_START}\n"
-            '[{"name": "func_name1", "arguments": {"params_name1": params_value1, "params_name2": params_value2, ...}}, '
-            '{"name": "model_name.func_name2", "arguments": {"params_name1": params_value1, ...}}]'
-            f"\n{FUNCTION_CALL_END}\n"
-        )
-        if use_prompt_fixes():
-            content = content.replace(original_format, updated_format)
-            content = content.replace(
-                "You SHOULD NOT include any other text in the response.",
-                "Make sure to also include module name as part of the output when applicable. E.g., triangle_properties.get instead of just get.\n"
-                "You SHOULD NOT include any other text in the response."
-            )
         original_input_format = "Here is a list of functions in JSON format that you can invoke."
         updated_input_format = f"Here is a list of functions in JSON format that you can invoke.\n{FUNCTION_DEF_START}"
         content = strict_replace(content, original_input_format, updated_input_format)
         content = content.rstrip() + f"\n{FUNCTION_DEF_END}\n"
 
         if use_thinking():
-            function_calling_format = updated_format if use_prompt_fixes() else original_format
-            thinking_suffix = THINKING_SYSTEM_PROMPT_PREFIX + function_calling_format
+            thinking_suffix = THINKING_SYSTEM_PROMPT_PREFIX + original_format
             content = content.replace(
                 "You should only return the function calls in your response.",
                 ""
@@ -330,33 +257,6 @@ def _parse_function_calls(code: str) -> list:
                 name: eval(value)
                 for name, value in function_call_.keyword_arguments.items()
             }
-            if not use_output_processing_fixes():
-                function_calls.append({name: arguments})
-                continue
-            if (
-                not arguments and
-                function_call_.positional_arguments and
-                len(function_call_.positional_arguments) == 1 and
-                (
-                    isinstance(function_call_.positional_arguments[0], dict) or
-                    (
-                        isinstance(function_call_.positional_arguments[0], str) and
-                        isinstance(json.loads(function_call_.positional_arguments[0]), dict)
-                    )
-                )
-            ):
-                # Sometimes instead of outputing function(a=1, b=2), it outputs function('{"a": 1, "b": 2}')
-                if isinstance(function_call_.positional_arguments[0], dict):
-                    arguments = function_call_.positional_arguments[0]
-                else:
-                    arguments = json.loads(function_call_.positional_arguments[0])
-                print()
-            if arguments.get("type", None) == "dict" and isinstance(arguments.get("properties", None), dict):
-                # Sometimes instead of outputing function(a=1, b=2), it outputs function(type="dict", properties={"a": 1, "b": 2})
-                arguments = arguments["properties"]
-            if isinstance(arguments.get("type", None), dict) and len(arguments) == 1:
-                # Sometimes instead of outputing function(a=1, b=2), it outputs function(type={"a": 1, "b": 2})
-                arguments = arguments["type"]
             function_calls.append({name: arguments})
     assert len(function_calls) == len(code.strip().splitlines())
     return function_calls
