@@ -67,6 +67,7 @@ class OSSHandler(BaseHandler, EnforceOverrides):
         backend: str,
         skip_server_setup: bool,
         local_model_path: Optional[str],
+        revision: Optional[str],
         include_input_log: bool,
         exclude_state_log: bool,
         update_mode: bool,
@@ -109,9 +110,8 @@ class OSSHandler(BaseHandler, EnforceOverrides):
         if hf_token:
             load_kwargs["token"] = hf_token
         
-        revision_flag = os.getenv("MODEL_REVISION", None)
-        if revision_flag:
-            load_kwargs["revision"] = revision_flag
+        if revision:
+            load_kwargs["revision"] = revision
         
         self.tokenizer = AutoTokenizer.from_pretrained(**load_kwargs)
         config = AutoConfig.from_pretrained(**load_kwargs)
@@ -130,8 +130,12 @@ class OSSHandler(BaseHandler, EnforceOverrides):
         if not skip_server_setup:
             if backend == "vllm":
                 extra_args = []
-                if revision_flag:
-                    extra_args = ["--revision", revision_flag]
+                if revision:
+                    extra_args = ["--revision", revision]
+                if os.getenv("MAX_TOKENS", None) is not None:
+                    max_tokens = int(os.getenv("MAX_TOKENS"))
+                    if max_tokens > 0:
+                        extra_args += ["--max-model-len", str(max_tokens)]
                 process = subprocess.Popen(
                     [
                         "vllm",
