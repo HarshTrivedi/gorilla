@@ -15,7 +15,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vim
 
 COPY pyproject.toml .
-RUN pip install . && pip cache purge
-RUN pip install "vllm==0.9.0.1" && pip cache purge
-# RUN pip install "vllm==0.8.5.post1" && pip cache purge
+RUN VLLM_USE_PRECOMPILED=1 pip install -e git+https://github.com/2015aroras/vllm.git@shanea/olmo3#egg=vllm && pip cache purge
+RUN pip install -e '.[gpu]' && pip cache purge
 COPY . /stage

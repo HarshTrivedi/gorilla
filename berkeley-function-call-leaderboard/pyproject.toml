@@ -34,7 +34,7 @@ dependencies = [
     "tenacity==9.0.0",
     "writer-sdk>=2.1.0",
     "libcst==1.7.0",
-    "transformers",
+    "transformers @ git+https://github.com/2015aroras/transformers.git@shanea/olmo3", # Need this for head qk norm
     "overrides",
     "boto3"
 ]
@@ -49,6 +49,6 @@ include = ["bfcl*"]
 Repository = "https://github.com/ShishirPatil/gorilla/tree/main/berkeley-function-call-leaderboard"
 
 [project.optional-dependencies]
-oss_eval_vllm = ["vllm==0.7.3"]
+# Do not install vllm. Use the base env's installation instead.
 oss_eval_sglang = ["sglang[all]"]
 wandb = ["wandb==0.18.5"]
