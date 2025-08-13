@@ -42,6 +42,22 @@ def use_environment_role():
 def use_xlam_function_definition_fixes():
     return str(os.getenv("USE_XLAM_FUNCTION_DEFINITION_FIXES", "1")) in ("True", "1")
 
+<<<<<<< HEAD
+=======
+
+def use_openai_function_definition_fixes():
+    return str(os.getenv("USE_OPENAI_FUNCTION_DEFINITION_FIXES", "0")) in ("True", "1")
+
+
+def use_prompt_fixes():
+    return str(os.getenv("USE_PROMPT_FIXES", "1")) in ("True", "1")
+
+
+def use_output_processing_fixes():
+    return str(os.getenv("USE_OUTPUT_PROCESSING_FIXES", "1")) in ("True", "1")
+
+
+>>>>>>> 820e87f (add use_openai_function_definition_fixes() option)
 def use_thinking():
     return str(os.getenv("USE_THINKING", "0")) in ("True", "1")
 
@@ -162,8 +178,12 @@ class AllenAICodeHandler(AllenAIHandler):
         functions: list = test_entry["function"]
         test_category: str = test_entry["id"].rsplit("_", 1)[0]
         functions = func_doc_language_specific_pre_processing(functions, test_category)
+        if use_xlam_function_definition_fixes() and use_openai_function_definition_fixes():
+            raise ValueError("Cannot use both XLAM and OpenAI function definition fixes at the same time.")
         if use_xlam_function_definition_fixes():
             functions = change_to_xlam_function_definition(functions)
+        if use_openai_function_definition_fixes():
+            functions = change_to_openai_function_definition(functions)
         test_entry["question"][0] = system_prompt_pre_processing_chat_model(
             test_entry["question"][0], functions, test_category
         )
@@ -268,6 +288,11 @@ def change_to_xlam_function_definition(functions: list[dict[str, Any]]) -> list[
         function["parameters"] = function["parameters"]["properties"]
         # TODO: Need to handle/check required / default: function["parameters"]["required"]
     return functions
+
+
+def change_to_openai_function_definition(functions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{"type": "function", "function": function} for function in functions]
+
 
 
 @dataclass
