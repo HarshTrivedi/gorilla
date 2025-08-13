@@ -270,8 +270,12 @@ class AllenAIJsonHandler(AllenAIHandler):
         functions: list = test_entry["function"]
         test_category: str = test_entry["id"].rsplit("_", 1)[0]
         functions = func_doc_language_specific_pre_processing(functions, test_category)
+        if use_xlam_function_definition_fixes() and use_openai_function_definition_fixes():
+            raise ValueError("Cannot use both XLAM and OpenAI function definition fixes at the same time.")
         if use_xlam_function_definition_fixes():
             functions = change_to_xlam_function_definition(functions)
+        if use_openai_function_definition_fixes():
+            functions = change_to_openai_function_definition(functions)
         test_entry["question"][0] = system_prompt_pre_processing_chat_model(
             test_entry["question"][0], functions, test_category
         )
