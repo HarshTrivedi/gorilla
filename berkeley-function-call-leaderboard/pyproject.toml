@@ -34,7 +34,7 @@ dependencies = [
     "tenacity==9.0.0",
     "writer-sdk>=2.1.0",
     "libcst==1.7.0",
-    "transformers",
+    "transformers==4.53.2",
     "overrides",
     "boto3"
 ]
