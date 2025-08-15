@@ -40,19 +40,19 @@ def use_environment_role():
 
 
 def use_xlam_function_definition_fixes():
-    return str(os.getenv("USE_XLAM_FUNCTION_DEFINITION_FIXES", "1")) in ("True", "1")
+    return str(os.getenv("USE_XLAM_FUNCTION_DEFINITION_FIXES", "0")) in ("True", "1")
 
 
 def use_openai_function_definition_fixes():
-    return str(os.getenv("USE_OPENAI_FUNCTION_DEFINITION_FIXES", "0")) in ("True", "1")
+    return str(os.getenv("USE_OPENAI_FUNCTION_DEFINITION_FIXES", "1")) in ("True", "1")
 
 
 def use_prompt_fixes():
-    return str(os.getenv("USE_PROMPT_FIXES", "1")) in ("True", "1")
+    return str(os.getenv("USE_PROMPT_FIXES", "0")) in ("True", "1")
 
 
 def use_output_processing_fixes():
-    return str(os.getenv("USE_OUTPUT_PROCESSING_FIXES", "1")) in ("True", "1")
+    return str(os.getenv("USE_OUTPUT_PROCESSING_FIXES", "0")) in ("True", "1")
 
 
 def use_thinking():

@@ -66,8 +66,8 @@ if [ "$IS_FT_MODEL" -eq 0 ]; then
   fi
 else
   if [ -z "$USE_XLAM_FUNCTION_DEFINITION_FIXES" ]; then
-    echo "USE_XLAM_FUNCTION_DEFINITION_FIXES environment variable is not set. Using default: 1"
-    USE_XLAM_FUNCTION_DEFINITION_FIXES=1
+    echo "USE_XLAM_FUNCTION_DEFINITION_FIXES environment variable is not set. Using default: 0"
+    USE_XLAM_FUNCTION_DEFINITION_FIXES=0
   fi
 
   if [ -z "$USE_OPENAI_FUNCTION_DEFINITION_FIXES" ]; then
@@ -76,8 +76,8 @@ else
   fi
 
   if [ -z "$USE_PROMPT_FIXES" ]; then
-    echo "USE_PROMPT_FIXES environment variable is not set. Using default: 1"
-    USE_PROMPT_FIXES=1
+    echo "USE_PROMPT_FIXES environment variable is not set. Using default: 0"
+    USE_PROMPT_FIXES=0
   fi
 
   if [ -z "$USE_ENVIRONMENT_ROLE" ]; then
@@ -86,8 +86,8 @@ else
   fi
 
   if [ -z "$USE_OUTPUT_PROCESSING_FIXES" ]; then
-    echo "USE_OUTPUT_PROCESSING_FIXES environment variable is not set. Using default: 1"
-    USE_OUTPUT_PROCESSING_FIXES=1
+    echo "USE_OUTPUT_PROCESSING_FIXES environment variable is not set. Using default: 0"
+    USE_OUTPUT_PROCESSING_FIXES=0
   fi
 
   if [ -z "$USE_THINKING" ]; then
