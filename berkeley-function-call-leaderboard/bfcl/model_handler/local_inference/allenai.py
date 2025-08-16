@@ -192,8 +192,8 @@ class AllenAICodeHandler(AllenAIHandler):
             "module_name.func_name2(params_name3=params_value3, ...)\n"
             f"{FUNCTION_CALL_END}\n"
         )
+        content = strict_replace(content, original_output_format, updated_output_format)
         if use_prompt_fixes():
-            content = strict_replace(content, original_output_format, updated_output_format)
             content = strict_replace(
                 content,
                 "If none of the functions can be used, point it out.",
@@ -287,8 +287,8 @@ class AllenAIJsonHandler(AllenAIHandler):
             '{"name": "model_name.func_name2", "arguments": {"params_name1": params_value1, ...}}]'
             f"\n{FUNCTION_CALL_END}\n"
         )
+        content = content.replace(original_format, updated_format)
         if use_prompt_fixes():
-            content = content.replace(original_format, updated_format)
             content = content.replace(
                 "You SHOULD NOT include any other text in the response.",
                 "Make sure to also include module name as part of the output when applicable. E.g., triangle_properties.get instead of just get.\n"
