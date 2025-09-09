@@ -231,7 +231,7 @@ class OSSHandler(BaseHandler, EnforceOverrides):
                 # Signal threads to stop reading output
                 stop_event.set()
 
-            num_workers = os.getenv("NUM_WORKERS", 100)
+            num_workers = int(os.getenv("NUM_WORKERS", "100"))
 
             # Once the server is ready, make the completion requests
             futures = []

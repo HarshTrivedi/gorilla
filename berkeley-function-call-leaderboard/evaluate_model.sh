@@ -24,6 +24,11 @@ if [ -z "$NUM_THREADS" ]; then
   NUM_THREADS=1
 fi
 
+if [ -z "$NUM_WORKERS" ]; then
+  echo "NUM_WORKERS environment variable is not set. Using default: 100."
+  NUM_WORKERS=100
+fi
+
 if [ -z "$TEST_CATEGORY" ]; then
   echo "TEST_CATEGORY environment variable is not set. Using default: all categories."
   TEST_CATEGORY="all"
@@ -99,6 +104,7 @@ fi
 # Print the configuration
 echo "Configuration:"
 echo "  NUM_THREADS: $NUM_THREADS"
+echo "  NUM_WORKERS: $NUM_WORKERS"
 echo "  TEST_CATEGORY: $TEST_CATEGORY"
 echo "  MODEL_NAME: $MODEL_NAME"
 echo "  LOCAL_MODEL_PATH: $LOCAL_MODEL_PATH"
@@ -106,6 +112,7 @@ echo "  MODEL_REVISION: $MODEL_REVISION"
 echo "  CALL_FORMAT: $CALL_FORMAT"
 echo "  IS_FT_MODEL: $IS_FT_MODEL"
 echo "  MAX_TOKENS: $MAX_TOKENS"
+echo "  MAX_NUM_SEQS: $MAX_NUM_SEQS"
 echo "  USE_ENVIRONMENT_ROLE: $USE_ENVIRONMENT_ROLE"
 echo "  USE_PROMPT_FIXES: $USE_PROMPT_FIXES"
 echo "  USE_OUTPUT_PROCESSING_FIXES: $USE_OUTPUT_PROCESSING_FIXES"
@@ -119,6 +126,7 @@ YAML_FILE="./evaluate_copy-${TEST_CATEGORY}.yaml"
 cp $YAML_FILE_TEMPLATE $YAML_FILE
 # Perform platform-safe in-place replacements
 sed -i.bak "s|<NUM_THREADS>|$NUM_THREADS|g" "$YAML_FILE"
+sed -i.bak "s|<NUM_WORKERS>|$NUM_WORKERS|g" "$YAML_FILE"
 sed -i.bak "s|<TEST_CATEGORY>|$TEST_CATEGORY|g" "$YAML_FILE"
 sed -i.bak "s|<MODEL_NAME>|$MODEL_NAME|g" "$YAML_FILE"
 sed -i.bak "s|<MODEL_REVISION>|$MODEL_REVISION|g" "$YAML_FILE"
@@ -154,6 +162,14 @@ if [ -z "$MAX_TOKENS" ]; then
   sed -i.bak '/- name: MAX_TOKENS/{N;d;}' "$YAML_FILE"
 else
   sed -i.bak "s|<MAX_TOKENS>|$MAX_TOKENS|g" "$YAML_FILE"
+fi
+
+if [ -z "$MAX_NUM_SEQS" ]; then
+  # Remove env var assignment
+  sed -i.bak -E 's/MAX_NUM_SEQS=<MAX_NUM_SEQS>[[:space:]]*//g' "$YAML_FILE"
+  sed -i.bak '/- name: MAX_NUM_SEQS/{N;d;}' "$YAML_FILE"
+else
+  sed -i.bak "s|<MAX_NUM_SEQS>|$MAX_NUM_SEQS|g" "$YAML_FILE"
 fi
 
 
