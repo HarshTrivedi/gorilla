@@ -127,11 +127,15 @@ class OSSHandler(BaseHandler, EnforceOverrides):
                 )
         print(f"Max context length: {self.max_context_length}")
 
+        max_num_seqs = os.getenv("MAX_NUM_SEQS", None)
+
         if not skip_server_setup:
             if backend == "vllm":
                 extra_args = []
                 if revision_flag:
                     extra_args = ["--revision", revision_flag]
+                if max_num_seqs:
+                    extra_args.extend(["--max-num-seqs", str(max_num_seqs)])
                 process = subprocess.Popen(
                     [
                         "vllm",
@@ -227,9 +231,11 @@ class OSSHandler(BaseHandler, EnforceOverrides):
                 # Signal threads to stop reading output
                 stop_event.set()
 
+            num_workers = os.getenv("NUM_WORKERS", 100)
+
             # Once the server is ready, make the completion requests
             futures = []
-            with ThreadPoolExecutor(max_workers=100) as executor:
+            with ThreadPoolExecutor(max_workers=num_workers) as executor:
                 with tqdm(
                     total=len(test_entries),
                     desc=f"Generating results for {self.model_name}",
