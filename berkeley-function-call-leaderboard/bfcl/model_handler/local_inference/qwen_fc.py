@@ -1,5 +1,6 @@
 ## Based on commit: https://github.com/ShishirPatil/gorilla/commit/cd9429ccf3d4d04156affe883c495b3b047e6b64
 import json
+import os
 import re
 
 from bfcl.model_handler.local_inference.base_oss_handler import OSSHandler
@@ -9,6 +10,8 @@ from bfcl.model_handler.utils import (
 )
 from overrides import override
 
+def use_thinking():
+    return str(os.getenv("USE_THINKING", "1")) in ("True", "1")
 
 class QwenFCHandler(OSSHandler):
     def __init__(self, model_name, temperature) -> None:
@@ -232,6 +235,8 @@ class QwenFCHandler(OSSHandler):
                     formatted_prompt += "<|im_end|>\n"
 
         formatted_prompt += "<|im_start|>assistant\n"
+        if not use_thinking():
+            formatted_prompt += "<think>\n\n</think>\n\n"
         return formatted_prompt
 
     @override
