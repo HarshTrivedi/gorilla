@@ -1,6 +1,6 @@
 version: v2
 budget: ai2/oe-adapt
-description: "BFCL Evaluation job (<TEST_CATEGORY>) for <MODEL_NAME>: <MODEL_REVISION>"
+description: "BFCL Evaluation job (<TEST_CATEGORY>) for <MODEL_NAME>: <MODEL_REVISION>, USE_THINKING: <USE_THINKING>"
 tasks:
   - name: "bfcl-evals"
     image:
@@ -11,9 +11,7 @@ tasks:
       # -  python -m scripts.upload_results_to_hf -f /stage/score -m <MODEL_REVISION> -b bfclv3_single_turn
     constraints:
       cluster:
-        - ai2/augusta-google-1
         - ai2/saturn-cirrascale
-        - ai2/jupiter-cirrascale-2
         - ai2/ceres-cirrascale
     datasets:
       - mountPath: /weka/oe-adapt-default
