@@ -40,7 +40,7 @@ tasks:
       - name: TEST_CATEGORY
         value: <TEST_CATEGORY>
       - name: HF_TOKEN
-        secret: ljm_HF_TOKEN
+        secret: HF_TOKEN
       - name: OPENAI_API_KEY
         secret: ljm_OPENAI_API_KEY
       - name: USE_ENVIRONMENT_ROLE
