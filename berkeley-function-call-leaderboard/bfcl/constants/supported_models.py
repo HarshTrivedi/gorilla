@@ -102,6 +102,7 @@ SUPPORTED_MODELS = [
     "MadeAgents/Hammer2.1-1.5b",
     "MadeAgents/Hammer2.1-0.5b",
     "THUDM/glm-4-9b-chat",
+    "EssentialAI/rnj-1-instruct",
     "Qwen/Qwen2.5-0.5B-Instruct-FC",
     "Qwen/Qwen2.5-0.5B-Instruct",
     "Qwen/Qwen2.5-1.5B-Instruct-FC",

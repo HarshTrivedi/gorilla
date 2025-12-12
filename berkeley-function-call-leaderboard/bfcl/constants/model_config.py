@@ -133,6 +133,18 @@ api_inference_model_map = {
         is_fc_model=True,
         underscore_to_dot=True,
     ),
+    "EssentialAI/rnj-1-instruct": ModelConfig(
+        model_name="EssentialAI/rnj-1-instruct",
+        display_name="RNJ-1-Instruct (FC)",
+        url="https://huggingface.co/EssentialAI/rnj-1-instruct",
+        org="EssentialAI",
+        license="Apache 2.0",
+        model_handler=OpenAIHandler,
+        input_price=None,
+        output_price=None,
+        is_fc_model=True,
+        underscore_to_dot=False,
+    ),
     "gpt-4.5-preview-2025-02-27": ModelConfig(
         model_name="gpt-4.5-preview-2025-02-27",
         display_name="GPT-4.5-Preview-2025-02-27 (Prompt)",
