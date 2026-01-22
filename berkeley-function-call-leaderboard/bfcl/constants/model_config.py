@@ -30,7 +30,6 @@ from bfcl.model_handler.local_inference.gemma import GemmaHandler
 from bfcl.model_handler.local_inference.glaive import GlaiveHandler
 from bfcl.model_handler.local_inference.glm import GLMHandler
 from bfcl.model_handler.local_inference.granite import GraniteHandler
-from bfcl.model_handler.local_inference.granite_3 import Granite3FCHandler
 from bfcl.model_handler.local_inference.hammer import HammerHandler
 from bfcl.model_handler.local_inference.hermes import HermesHandler
 from bfcl.model_handler.local_inference.llama import LlamaHandler
@@ -1134,30 +1133,6 @@ local_inference_model_map = {
         output_price=None,
         is_fc_model=False,
         underscore_to_dot=True,
-    ),
-    "ibm-granite/granite-3.2-8b-instruct": ModelConfig(
-        model_name="ibm-granite/granite-3.2-8b-instruct",
-        display_name="Granite-3.2-8B-Instruct (FC)",
-        url="https://huggingface.co/ibm-granite/granite-3.2-8b-instruct",
-        org="IBM",
-        license="Apache-2.0",
-        model_handler=Granite3FCHandler,
-        input_price=None,
-        output_price=None,
-        is_fc_model=True,
-        underscore_to_dot=False,
-    ),
-    "ibm-granite/granite-3.3-8b-instruct": ModelConfig(
-        model_name="ibm-granite/granite-3.3-8b-instruct",
-        display_name="Granite-3.3-8B-Instruct (FC)",
-        url="https://huggingface.co/ibm-granite/granite-3.3-8b-instruct",
-        org="IBM",
-        license="Apache-2.0",
-        model_handler=Granite3FCHandler,
-        input_price=None,
-        output_price=None,
-        is_fc_model=True,
-        underscore_to_dot=False,
     ),
     "MadeAgents/Hammer2.1-7b": ModelConfig(
         model_name="MadeAgents/Hammer2.1-7b",
