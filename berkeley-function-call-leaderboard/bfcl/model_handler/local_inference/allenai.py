@@ -91,6 +91,7 @@ def get_random_free_port(max_attempts=20):
 class AllenAIHandler(OSSHandler):
     def __init__(self, model_name, temperature) -> None:
         super().__init__(model_name, temperature)
+        self.model_name_huggingface = model_name.replace("-FC", "")
         vllm_port = str(get_random_free_port())
         print(f"Selected port: {vllm_port} for the VLLM server.")
         self.vllm_port = vllm_port
