@@ -327,6 +327,13 @@ def remove_think_tags(text: str) -> str:
     return re.sub(pattern, "", text, flags=re.DOTALL)
 
 
+def normalize_json_literals(code: str) -> str:
+    return re.sub(
+        r'(?<=\=)\s*(true|false|null)\b',
+        lambda m: {'true': 'True', 'false': 'False', 'null': 'None'}[m.group(1)],
+        code
+    )
+
 def _parse_function_calls(code: str) -> list:
     code = remove_think_tags(code)
     for token in [FUNCTION_CALL_START, FUNCTION_CALL_END]:
@@ -424,6 +431,7 @@ class FunctionCallVisitor(cst.CSTVisitor):
 
 
 def parse_code_function_calls(code: str) -> list[ParsedFunctionCallCodeOutput]:
+    code = normalize_json_literals(code)
     parsed_code = cst.parse_module(code)
     visitor = FunctionCallVisitor(code)
     parsed_code.visit(visitor)
