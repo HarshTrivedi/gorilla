@@ -5,7 +5,16 @@ from pathlib import Path
 from typing import Union
 
 from bfcl.constants.category_mapping import TEST_COLLECTION_MAPPING, TEST_FILE_MAPPING, VERSION_PREFIX
+from bfcl.constants import model_config
 
+
+def get_qualified_model_name(model_name):
+    """
+    Convert model name to a fully qualified name by replacing underscores with slashes.
+    This is used to match the model names in the MODEL_CONFIG_MAPPING.
+    """
+    matched_model_name = next((name for name in model_config.MODEL_CONFIG_MAPPING if name.replace("/", "_") == model_name), None)
+    return matched_model_name
 
 def extract_test_category(input_string: Union[str, Path]) -> str:
     input_string = str(input_string)
@@ -171,14 +180,6 @@ def is_executable_format_output(decoded_output):
     return False
 
 
-def is_rest_format_output(decoded_output):
-    # Ensure the output is a list of one string
-    if type(decoded_output) == list:
-        if len(decoded_output) == 1 and type(decoded_output[0]) == str:
-            return True
-    return False
-
-
 def is_empty_output(decoded_output):
     # This function is a patch to the ast decoder for relevance detection
     # Sometimes the ast decoder will parse successfully, but the input doens't really have a function call
@@ -190,17 +191,6 @@ def is_empty_output(decoded_output):
     if len(decoded_output) == 1 and len(decoded_output[0]) == 0:
         return True
     return False
-
-
-def check_api_key_supplied() -> bool:
-    """
-    This function checks if the four API Keys needed for the executable categoreis are provided. If not, those categories will be skipped.
-    """
-    ENV_VARS = ("GEOCODE_API_KEY", "RAPID_API_KEY", "OMDB_API_KEY", "EXCHANGERATE_API_KEY")
-    for var in ENV_VARS:
-        if not os.getenv(var):
-            return False
-    return True
 
 
 def parse_test_category_argument(test_category_args):
