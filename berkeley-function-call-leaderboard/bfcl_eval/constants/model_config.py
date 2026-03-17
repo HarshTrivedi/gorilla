@@ -1194,8 +1194,8 @@ api_inference_model_map = {
         model_handler=OpenAICompletionsHandler,
         input_price=None,
         output_price=None,
-        is_fc_model=False,
-        underscore_to_dot=False,
+        is_fc_model=True,
+        underscore_to_dot=True,
     ),
     "allenai/Olmo-3-7B-Instruct-DPO": ModelConfig(
         model_name="allenai/Olmo-3-7B-Instruct-DPO",
@@ -1206,8 +1206,8 @@ api_inference_model_map = {
         model_handler=OpenAICompletionsHandler,
         input_price=None,
         output_price=None,
-        is_fc_model=False,
-        underscore_to_dot=False,
+        is_fc_model=True,
+        underscore_to_dot=True,
     ),
     "allenai/Olmo-3-7B-Instruct-SFT": ModelConfig(
         model_name="allenai/Olmo-3-7B-Instruct-SFT",
@@ -1218,8 +1218,8 @@ api_inference_model_map = {
         model_handler=OpenAICompletionsHandler,
         input_price=None,
         output_price=None,
-        is_fc_model=False,
-        underscore_to_dot=False,
+        is_fc_model=True,
+        underscore_to_dot=True,
     ),
 }
 
