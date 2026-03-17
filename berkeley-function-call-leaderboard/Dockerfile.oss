@@ -14,6 +14,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     vim
 
-COPY pyproject.toml .
-RUN pip install . && pip cache purge
 COPY . /stage
+RUN pip install . && pip cache purge
