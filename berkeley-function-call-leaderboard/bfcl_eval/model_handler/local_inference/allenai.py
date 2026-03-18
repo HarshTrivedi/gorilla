@@ -121,6 +121,7 @@ class AllenAIHandler(OSSHandler):
     # FC methods
     # ------------------------------------------------------------------
 
+    @override
     def _query_FC(self, inference_data: dict):
         message: list[dict] = inference_data["message"]
         tools = inference_data["tools"]
@@ -130,7 +131,6 @@ class AllenAIHandler(OSSHandler):
             "messages": message,
             "model": self._model_id,
             "temperature": self.temperature,
-            "store": False,
         }
 
         if len(tools) > 0:
@@ -138,16 +138,19 @@ class AllenAIHandler(OSSHandler):
 
         return self.generate_with_backoff(**kwargs)
 
+    @override
     def _pre_query_processing_FC(self, inference_data: dict, test_entry: dict) -> dict:
         inference_data["message"] = []
         return inference_data
 
+    @override
     def _compile_tools(self, inference_data: dict, test_entry: dict) -> dict:
         functions: list = test_entry["function"]
         tools = convert_to_tool(functions, GORILLA_TO_OPENAPI, self.model_style)
         inference_data["tools"] = tools
         return inference_data
 
+    @override
     def _parse_query_response_FC(self, api_response: Any) -> dict:
         try:
             model_responses = [
@@ -171,18 +174,21 @@ class AllenAIHandler(OSSHandler):
             "output_token": api_response.usage.completion_tokens,
         }
 
+    @override
     def add_first_turn_message_FC(
         self, inference_data: dict, first_turn_message: list[dict]
     ) -> dict:
         inference_data["message"].extend(first_turn_message)
         return inference_data
 
+    @override
     def _add_next_turn_user_message_FC(
         self, inference_data: dict, user_message: list[dict]
     ) -> dict:
         inference_data["message"].extend(user_message)
         return inference_data
 
+    @override
     def _add_assistant_message_FC(
         self, inference_data: dict, model_response_data: dict
     ) -> dict:
@@ -191,6 +197,7 @@ class AllenAIHandler(OSSHandler):
         )
         return inference_data
 
+    @override
     def _add_execution_results_FC(
         self,
         inference_data: dict,
@@ -208,6 +215,7 @@ class AllenAIHandler(OSSHandler):
             inference_data["message"].append(tool_message)
         return inference_data
 
+    # @override
     # def _add_reasoning_content_if_available_FC(
     #     self, api_response: Any, response_data: dict
     # ) -> None:
