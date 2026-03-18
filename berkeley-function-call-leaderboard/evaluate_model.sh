@@ -28,7 +28,6 @@ if [ -z "$USE_THINKING" ]; then
   USE_THINKING=0
 fi
 
-
 # Print the configuration
 echo "Configuration:"
 echo "  NUM_THREADS: $NUM_THREADS"
@@ -39,6 +38,7 @@ echo "  MODEL_REVISION: $MODEL_REVISION"
 echo "  MAX_TOKENS: $MAX_TOKENS"
 echo "  USE_THINKING: $USE_THINKING"
 echo "  OPENAI_BASE_URL: $OPENAI_BASE_URL"
+echo "  EXTRA_VLLM_ARGS: $EXTRA_VLLM_ARGS"
 
 YAML_FILE_TEMPLATE="./evaluate_template.yaml"
 YAML_FILE="./evaluate_copy-${TEST_CATEGORY}.yaml"
@@ -67,6 +67,14 @@ else
 fi
 
 sed -i.bak "s|<LOCAL_MODEL_PATH>|$LOCAL_MODEL_PATH|g" "$YAML_FILE"
+
+
+if [ -z "$EXTRA_VLLM_ARGS" ]; then
+  # Remove CLI flag
+  sed -i.bak -E 's/--extra-vllm-args[[:space:]]+"?<EXTRA_VLLM_ARGS>"?//g' "$YAML_FILE"
+fi
+
+sed -i.bak "s|<EXTRA_VLLM_ARGS>|$EXTRA_VLLM_ARGS|g" "$YAML_FILE"
 
 
 if [ -z "$MAX_TOKENS" ]; then
