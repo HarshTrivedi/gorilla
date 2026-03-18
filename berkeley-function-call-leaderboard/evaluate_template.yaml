@@ -49,3 +49,5 @@ tasks:
         value: <USE_THINKING>
       - name: OPENAI_BASE_URL
         value: <OPENAI_BASE_URL>
+      - name: BFCL_PROJECT_ROOT
+        value: /stage
