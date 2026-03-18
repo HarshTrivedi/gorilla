@@ -1,4 +1,5 @@
 import os
+import shlex
 import subprocess
 import threading
 import time
@@ -82,6 +83,7 @@ class OSSHandler(BaseHandler, EnforceOverrides):
         lora_modules: Optional[list[str]] = None,
         enable_lora: bool = False,
         max_lora_rank: Optional[int] = None,
+        extra_vllm_args: Optional[str] = "",
     ):
         """
         Spin up a local server for the model.
@@ -175,6 +177,7 @@ class OSSHandler(BaseHandler, EnforceOverrides):
                             str(gpu_memory_utilization),
                             "--trust-remote-code",
                         ]
+                        + (shlex.split(extra_vllm_args) if extra_vllm_args else [])
                         + (["--enable-lora"] if enable_lora else [])
                         + (
                             ["--max-lora-rank", str(max_lora_rank)]

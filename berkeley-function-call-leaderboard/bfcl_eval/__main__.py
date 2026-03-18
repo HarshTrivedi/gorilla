@@ -163,6 +163,11 @@ def generate(
         "--lora-modules",
         help='Specify the path to the LoRA modules for vLLM backend in name="path" format. Can be specified multiple times.',
     ),
+    extra_vllm_args: Optional[str] = typer.Option(
+        None,
+        "--extra-vllm-args",
+        help="Extra arguments to pass directly to the vLLM server (e.g. '--tool-call-parser hermes'). The string is split with shlex, so quoting rules apply.",
+    ),
 ):
     """
     Generate the LLM response for one or more models on a test-category (same as openfunctions_evaluation.py).
@@ -186,6 +191,7 @@ def generate(
         enable_lora=enable_lora,
         max_lora_rank=max_lora_rank,
         lora_modules=lora_modules,
+        extra_vllm_args=extra_vllm_args,
     )
     load_dotenv(dotenv_path=DOTENV_PATH, verbose=True, override=True)  # Load the .env file
     generation_main(args)
