@@ -10,9 +10,7 @@ from bfcl_eval.model_handler.utils import (
     convert_to_tool,
     default_decode_ast_prompting,
     default_decode_execute_prompting,
-    format_execution_results_prompting,
     retry_with_backoff,
-    system_prompt_pre_processing_chat_model,
 )
 from bfcl_eval.utils import contain_multi_turn_interaction
 from openai import RateLimitError
@@ -44,10 +42,6 @@ class AllenAIHandler(OSSHandler):
         self.model_style = ModelStyle.OPENAI_COMPLETIONS
         # The OpenAI client pointing at the local vLLM server is already
         # initialised by OSSHandler.__init__ (self.client).
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
 
     @property
     def _model_id(self) -> str:
@@ -87,12 +81,6 @@ class AllenAIHandler(OSSHandler):
                 return self.inference_single_turn_FC(test_entry, include_input_log)
         else:
             raise NotImplementedError("This handler currently doesn't support non-FC mode.")
-            # if is_multi_turn:
-            #     return self.inference_multi_turn_prompting(
-            #         test_entry, include_input_log, exclude_state_log
-            #     )
-            # else:
-            #     return self.inference_single_turn_prompting(test_entry, include_input_log)
 
     # ------------------------------------------------------------------
     # Decode  (override OSSHandler's prompting-only defaults)
@@ -116,10 +104,6 @@ class AllenAIHandler(OSSHandler):
             return convert_to_function_call(result)
         else:
             return default_decode_execute_prompting(result)
-
-    # ------------------------------------------------------------------
-    # FC methods
-    # ------------------------------------------------------------------
 
     @override
     def _query_FC(self, inference_data: dict):
@@ -214,116 +198,3 @@ class AllenAIHandler(OSSHandler):
             }
             inference_data["message"].append(tool_message)
         return inference_data
-
-    # @override
-    # def _add_reasoning_content_if_available_FC(
-    #     self, api_response: Any, response_data: dict
-    # ) -> None:
-    #     message = api_response.choices[0].message
-    #
-    #     if getattr(message, "tool_calls", None):
-    #         assistant_message = {
-    #             "role": "assistant",
-    #             "content": message.content,
-    #             "tool_calls": [
-    #                 {
-    #                     "id": tool_call.id,
-    #                     "type": tool_call.type,
-    #                     "function": {
-    #                         "name": tool_call.function.name,
-    #                         "arguments": tool_call.function.arguments,
-    #                     },
-    #                 }
-    #                 for tool_call in message.tool_calls
-    #             ],
-    #         }
-    #         response_data["model_responses_message_for_chat_history"] = assistant_message
-    #     elif hasattr(message, "reasoning_content"):
-    #         response_data["model_responses_message_for_chat_history"] = {
-    #             "role": "assistant",
-    #             "content": message.content,
-    #         }
-    #
-    #     if hasattr(message, "reasoning_content"):
-    #         response_data["reasoning_content"] = message.reasoning_content
-
-    # # ------------------------------------------------------------------
-    # # Prompting methods  (override OSSHandler's completions-API versions)
-    # # ------------------------------------------------------------------
-
-    # @override
-    # def _query_prompting(self, inference_data: dict):
-    #     inference_data["inference_input_log"] = {"message": repr(inference_data["message"])}
-
-    #     return self.generate_with_backoff(
-    #         messages=inference_data["message"],
-    #         model=self._model_id,
-    #         temperature=self.temperature,
-    #         store=False,
-    #     )
-
-    # @override
-    # def _pre_query_processing_prompting(self, test_entry: dict) -> dict:
-    #     functions: list = test_entry["function"]
-    #     test_entry_id: str = test_entry["id"]
-
-    #     test_entry["question"][0] = system_prompt_pre_processing_chat_model(
-    #         test_entry["question"][0], functions, test_entry_id
-    #     )
-
-    #     return {"message": []}
-
-    # @override
-    # def _parse_query_response_prompting(self, api_response: Any) -> dict:
-    #     return {
-    #         "model_responses": api_response.choices[0].message.content,
-    #         "model_responses_message_for_chat_history": api_response.choices[0].message,
-    #         "input_token": api_response.usage.prompt_tokens,
-    #         "output_token": api_response.usage.completion_tokens,
-    #     }
-
-    # @override
-    # def add_first_turn_message_prompting(
-    #     self, inference_data: dict, first_turn_message: list[dict]
-    # ) -> dict:
-    #     inference_data["message"].extend(first_turn_message)
-    #     return inference_data
-
-    # @override
-    # def _add_next_turn_user_message_prompting(
-    #     self, inference_data: dict, user_message: list[dict]
-    # ) -> dict:
-    #     inference_data["message"].extend(user_message)
-    #     return inference_data
-
-    # @override
-    # def _add_assistant_message_prompting(
-    #     self, inference_data: dict, model_response_data: dict
-    # ) -> dict:
-    #     inference_data["message"].append(
-    #         model_response_data["model_responses_message_for_chat_history"]
-    #     )
-    #     return inference_data
-
-    # @override
-    # def _add_execution_results_prompting(
-    #     self, inference_data: dict, execution_results: list[str], model_response_data: dict
-    # ) -> dict:
-    #     formatted_results_message = format_execution_results_prompting(
-    #         inference_data, execution_results, model_response_data
-    #     )
-    #     inference_data["message"].append(
-    #         {"role": "user", "content": formatted_results_message}
-    #     )
-    #     return inference_data
-
-    # def _add_reasoning_content_if_available_prompting(
-    #     self, api_response: Any, response_data: dict
-    # ) -> None:
-    #     message = api_response.choices[0].message
-    #     if hasattr(message, "reasoning_content"):
-    #         response_data["reasoning_content"] = message.reasoning_content
-    #         response_data["model_responses_message_for_chat_history"] = {
-    #             "role": "assistant",
-    #             "content": str(response_data["model_responses"]),
-    #         }
