@@ -24,6 +24,8 @@ fi
 SERVE_CMD="vllm serve $MODEL_NAME --revision $MODEL_REVISION --tensor-parallel-size 1 --trust-remote-code --dtype bfloat16 --gpu-memory-utilization 0.9 $EXTRA_ARGS"
 
 gantry run \
+  --workspace ai2/general-tool-use \
+  --budget ai2/oe-adapt \
   --description "vLLM Server for $MODEL_NAME: $MODEL_REVISION" \
   --cluster ai2/saturn-cirrascale \
   --gpus 1 \

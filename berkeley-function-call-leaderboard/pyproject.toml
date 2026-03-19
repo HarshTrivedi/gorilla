@@ -77,10 +77,6 @@ oss_eval_vllm = ["vllm==0.8.5"]
 oss_eval_sglang = ["sglang[all]"]
 wandb = ["wandb==0.18.5"]
 
-[tool.gantry]
-workspace = "ai2/general-tool-use"
-budget = "ai2/oe-adapt"
-
 [tool.setuptools_scm]
 tag_regex = '^v(?P<version>[0-9]{4}\.[0-9]{2}\.[0-9]{2}(?:\.[0-9]+)?)$'
 fallback_version = "0.0.0.dev0"
