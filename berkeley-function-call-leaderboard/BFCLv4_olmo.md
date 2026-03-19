@@ -13,7 +13,7 @@ sh ./build_image.sh
 ```bash
 MODEL_NAME=allenai/Olmo-3-7B-Instruct \
 MODEL_REVISION=main \
-EXTRA_ARGS="--enable-auto-tool-choice --tool-call-parser olmo3" \
+EXTRA_ARGS="--gpu-memory-utilization 0.9 --enable-auto-tool-choice --tool-call-parser olmo3 --chat-template ./olmo3_chat_template_fixed.jinja" \
 ./serve_vllm_model.sh
 ```
 
@@ -39,8 +39,19 @@ MODEL_REVISION=main \
 MODEL_NAME=allenai/Olmo-3-7B-Instruct-local \
 NUM_THREADS=100 \
 TEST_CATEGORY="single_turn,multi_turn,memory" \
-EXTRA_VLLM_ARGS="--gpu-memory-utilization 0.9 --enable-auto-tool-choice --tool-call-parser olmo3" \
+EXTRA_VLLM_ARGS="--gpu-memory-utilization 0.9 --enable-auto-tool-choice --tool-call-parser olmo3 --chat-template ./olmo3_chat_template_fixed.jinja" \
 ./evaluate_model.sh
+```
+
+Using Gantry (for quick experimentation):
+```bash
+# Omit --allow-dirty as needed
+MODEL_REVISION=main \
+MODEL_NAME=allenai/Olmo-3-7B-Instruct-local \
+NUM_THREADS=100 \
+TEST_CATEGORY="single_turn,multi_turn,memory" \
+EXTRA_VLLM_ARGS="--gpu-memory-utilization 0.9 --enable-auto-tool-choice --tool-call-parser olmo3 --chat-template ./olmo3_chat_template_fixed.jinja" \
+./gantry_evaluate.sh --allow-dirty
 ```
 
 ---
@@ -73,7 +84,8 @@ For OLMo3:
 vllm serve allenai/Olmo-3-7B-Instruct \
   --gpu-memory-utilization 0.9 \
   --enable-auto-tool-choice \
-  --tool-call-parser olmo3
+  --tool-call-parser olmo3 \
+  --chat-template ./olmo3_chat_template_fixed.jinja
 ```
 
 For Qwen3:
@@ -138,6 +150,6 @@ For OLMo3 (note the `-local` **suffix** in the model name):
 ```bash
 bfcl generate --model allenai/Olmo-3-7B-Instruct-local \
   --backend vllm \
-  --extra-vllm-args "--gpu-memory-utilization 0.9 --enable-auto-tool-choice --tool-call-parser olmo3" \
+  --extra-vllm-args "--gpu-memory-utilization 0.9 --enable-auto-tool-choice --tool-call-parser olmo3 --chat-template ./olmo3_chat_template_fixed.jinja" \
   && bfcl evaluate --model allenai/Olmo-3-7B-Instruct-local
 ```

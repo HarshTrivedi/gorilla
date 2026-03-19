@@ -55,7 +55,7 @@ fi
 
 EVAL_CMD="bfcl evaluate --model \$MODEL_NAME --test-category \$TEST_CATEGORY"
 
-FULL_CMD="cd berkeley-function-call-leaderboard && $GENERATE_CMD && $EVAL_CMD && python convert_bfcl_scores_to_beaker_metrics.py --overall_csv score/data_overall.csv && cp -r score /results/"
+FULL_CMD="cd berkeley-function-call-leaderboard && $GENERATE_CMD && $EVAL_CMD && python convert_bfcl_scores_to_beaker_metrics.py --overall_csv score/data_overall.csv && cp -r score/* /results/"
 
 # Build gantry args
 GANTRY_ARGS=(
