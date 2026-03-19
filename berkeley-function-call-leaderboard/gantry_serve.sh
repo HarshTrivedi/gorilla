@@ -3,6 +3,9 @@
 # Launches a vLLM inference server on Beaker using the public vllm Docker image.
 # Usage: set the same env vars as serve_vllm_model.sh, then run this script.
 
+# Gantry must be run from the git repo root (BFCLv4/), not this subdirectory.
+cd "$(dirname "$0")/.."
+
 if [ -z "$MODEL_NAME" ]; then
   echo "MODEL_NAME environment variable is not set. Using default: allenai/general-tool-use-dev."
   MODEL_NAME="allenai/general-tool-use-dev"

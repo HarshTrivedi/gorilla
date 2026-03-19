@@ -3,6 +3,9 @@
 # Uses the current git commit (must be pushed) instead of a pre-built Docker image.
 # Usage: set the same env vars as evaluate_model.sh, then run this script.
 
+# Gantry must be run from the git repo root (BFCLv4/), not this subdirectory.
+cd "$(dirname "$0")/.."
+
 if [ -z "$MODEL_REVISION" ]; then
   echo "MODEL_REVISION environment variable is not set. This is important to track the model you're evaluating!"
   exit 1
@@ -52,7 +55,7 @@ fi
 
 EVAL_CMD="bfcl evaluate --model \$MODEL_NAME --test-category \$TEST_CATEGORY"
 
-FULL_CMD="$GENERATE_CMD && $EVAL_CMD && python convert_bfcl_scores_to_beaker_metrics.py --overall_csv score/data_overall.csv && cp -r score /results/"
+FULL_CMD="cd berkeley-function-call-leaderboard && $GENERATE_CMD && $EVAL_CMD && python convert_bfcl_scores_to_beaker_metrics.py --overall_csv score/data_overall.csv && cp -r score /results/"
 
 # Build gantry args
 GANTRY_ARGS=(
@@ -62,6 +65,7 @@ GANTRY_ARGS=(
   --priority high
   --not-preemptible
   --docker-image ghcr.io/allenai/pytorch:2.5.1-cuda12.4-python3.11
+  --install "pip install -e berkeley-function-call-leaderboard/"
   --env "MODEL_NAME=$MODEL_NAME"
   --env "MODEL_REVISION=$MODEL_REVISION"
   --env "NUM_THREADS=$NUM_THREADS"
