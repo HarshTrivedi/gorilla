@@ -35,4 +35,4 @@ gantry run \
   --no-python \
   --host-networking \
   --env-secret "HF_TOKEN=HF_TOKEN" \
-  -- bash -c "$SERVE_CMD"
+  "$@" -- bash -c "$SERVE_CMD"

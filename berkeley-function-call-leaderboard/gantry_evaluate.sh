@@ -62,7 +62,8 @@ GANTRY_ARGS=(
   --workspace ai2/general-tool-use
   --budget ai2/oe-adapt
   --description "BFCLv4 Evaluation ($TEST_CATEGORY) for $MODEL_NAME: $MODEL_REVISION"
-  --cluster ai2/saturn,ai2/neptune
+  --cluster ai2/saturn
+  --cluster ai2/neptune
   --gpus 1
   --priority high
   --not-preemptible
@@ -92,4 +93,4 @@ if [ -n "$OPENAI_BASE_URL" ]; then
   GANTRY_ARGS+=(--env "OPENAI_BASE_URL=$OPENAI_BASE_URL")
 fi
 
-gantry run "${GANTRY_ARGS[@]}" -- bash -c "$FULL_CMD"
+gantry run "${GANTRY_ARGS[@]}" "$@" -- bash -c "$FULL_CMD"
