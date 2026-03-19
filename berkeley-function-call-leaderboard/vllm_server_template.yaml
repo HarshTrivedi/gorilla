@@ -1,0 +1,34 @@
+version: v2
+budget: ai2/oe-adapt
+description: "VLLM Server for <MODEL_NAME>: <MODEL_REVISION>"
+tasks:
+  - name: "vllm-inference"
+    image:
+      docker: vllm/vllm-openai:v0.16.0
+    command: ["/bin/sh", "-c"]
+    arguments:
+      # - "[ ${BEAKER_REPLICA_RANK} -eq 0 ] && ray start --head --port=8888 && vllm serve allenai/general-tool-use-dev --revision ${MODEL_REVISION} --tensor-parallel-size 4 --trust-remote-code --dtype bfloat16 --gpu-memory-utilization 0.9 || (sleep 240 && ray start --address=${BEAKER_LEADER_REPLICA_HOSTNAME}:8888 --block)"
+      - "vllm serve ${MODEL_NAME} --revision ${MODEL_REVISION} --tensor-parallel-size 1 --trust-remote-code --dtype bfloat16 --gpu-memory-utilization 0.9 <EXTRA_ARGS>"
+    hostNetworking: true
+    leaderSelection: true
+    propagateFailure: true
+    propagatePreemption: true
+    replicas: 1
+    constraints:
+      cluster:
+        # - ai2/augusta-google-1
+        - ai2/saturn-cirrascale
+        # - ai2/jupiter-cirrascale-2
+        # - ai2/ceres-cirrascale
+    resources:
+      gpuCount: 1
+    context:
+      priority: high
+      preemptible: false
+    envVars:
+      - name: MODEL_NAME
+        value: <MODEL_NAME>
+      - name: MODEL_REVISION
+        value: <MODEL_REVISION>
+      - name: HF_TOKEN
+        secret: HF_TOKEN

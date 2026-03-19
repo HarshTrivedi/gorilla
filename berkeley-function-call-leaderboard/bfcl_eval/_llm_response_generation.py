@@ -3,7 +3,9 @@ import heapq
 import multiprocessing as mp
 import os
 import queue
+import random
 import shutil
+import socket
 import threading
 import traceback
 from collections import defaultdict
@@ -23,6 +25,20 @@ from bfcl_eval.model_handler.base_handler import BaseHandler
 from bfcl_eval.model_handler.local_inference.base_oss_handler import OSSHandler
 from bfcl_eval.utils import *
 from tqdm import tqdm
+
+
+def _is_port_free(port, host="127.0.0.1") -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(5)
+        return sock.connect_ex((host, port)) != 0
+
+
+def _get_random_free_port(max_attempts: int = 20) -> int:
+    for _ in range(max_attempts):
+        port = random.randint(49152, 65535)
+        if _is_port_free(port):
+            return port
+    raise RuntimeError("Failed to find a free port after several attempts.")
 
 
 def get_args():
@@ -221,6 +237,16 @@ def multi_threaded_inference(handler, test_case, include_input_log, exclude_stat
 
 
 def generate_results(args, model_name, test_cases_total):
+    # For OSS models, ensure LOCAL_SERVER_PORT is set before the handler is built
+    # (the handler reads it in __init__ to construct its base_url and client).
+    # If the user hasn't pinned a port, pick a free one and export it so that
+    # both the vLLM server process and the handler's OpenAI client agree on it.
+    config = MODEL_CONFIG_MAPPING[model_name]
+    if issubclass(config.model_handler, OSSHandler) and not os.getenv("LOCAL_SERVER_PORT"):
+        port = _get_random_free_port()
+        os.environ["LOCAL_SERVER_PORT"] = str(port)
+        print(f"LOCAL_SERVER_PORT not set — using dynamically selected port {port}.")
+
     handler = build_handler(model_name, args.temperature)
 
     if isinstance(handler, OSSHandler):
@@ -264,6 +290,7 @@ def generate_results(args, model_name, test_cases_total):
                 lora_modules=args.lora_modules,
                 enable_lora=args.enable_lora,
                 max_lora_rank=args.max_lora_rank,
+                extra_vllm_args=args.extra_vllm_args,
             )
 
         # ───── dependency bookkeeping ──────────────────────────────
